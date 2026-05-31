@@ -649,66 +649,88 @@ text.pref-label {
   /* メインレイアウト: 縦積み */
   #main-layout { flex-direction: column; }
 
-  /* 左サイドバー: 2行コンパクトバー */
+  /* 左サイドバー: 縦積み・全幅 */
   #left-sidebar {
     width: 100%;
     height: auto;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: visible;
+    flex-direction: column;
+    overflow: visible;
     border-right: none;
     border-bottom: 1px solid var(--border);
-    padding: 5px 8px;
-    gap: 12px;
+    padding: 8px 12px;
+    gap: 0;
     flex-shrink: 0;
-    align-items: flex-start;
+    position: relative;
   }
 
-  /* 各セクション共通: タイトル上・内容下の2行 */
   .sidebar-section {
-    flex-shrink: 0;
-    margin-bottom: 0;
+    width: 100%;
     padding: 0;
     border: none;
+    margin: 0;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
     gap: 4px;
   }
   .sidebar-section-title {
     display: block;
-    font-size: 0.58rem;
-    white-space: nowrap;
-    margin-bottom: 0;
+    font-size: 0.6rem;
+    margin-bottom: 2px;
     line-height: 1;
   }
 
-  /* エリア検索 */
-  #search-input { font-size: 0.72rem; padding: 5px 8px; width: 148px; }
-  #search-suggestions { width: 200px; }
-
-  /* モバイル: 凡例パネルを小さく調整 */
-  #legend-panel {
-    bottom: 10px;
-    right: 10px;
-    padding: 8px 10px;
-    min-width: 130px;
+  /* エリア検索: 全幅 */
+  #search-input {
+    width: 100%;
+    font-size: 0.82rem;
+    padding: 8px 12px;
+    box-sizing: border-box;
   }
-  #legend-title { font-size: 0.58rem; margin-bottom: 6px; }
-  .leg-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-  .leg-label { font-size: 0.62rem; }
-  /* 未評価ドットのlegend-item */
-  .leg-item:last-child .leg-dot { background: #374151; }
+  /* 候補リスト: 検索ボックス直下に表示 */
+  #search-suggestions {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    z-index: 300;
+    margin-top: 0;
+  }
 
-  /* 地図操作セクション: 完全非表示 */
+  /* 地図操作セクション: 非表示 */
   #left-sidebar .sidebar-section:last-child { display: none; }
 
   /* 地図エリア: 最大化 */
   #map-wrap {
     flex: 1;
-    min-height: 52vh;
+    min-height: 0;
   }
+
+  /* モバイル: 凡例を横1列コンパクト表示 */
+  #legend-panel {
+    bottom: 12px;
+    right: 10px;
+    padding: 6px 8px;
+    min-width: 0;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 6px;
+    max-width: calc(100vw - 20px);
+  }
+  #legend-title {
+    font-size: 0.55rem;
+    margin-bottom: 0;
+    flex: 0 0 100%;
+  }
+  .leg-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 0;
+  }
+  .leg-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .leg-label { font-size: 0.6rem; white-space: nowrap; }
 
   /* 右パネル: 下部固定ドロワー（地図に重ねる） */
   #right-sidebar {
@@ -748,9 +770,7 @@ text.pref-label {
 @media (max-width: 480px) {
   header { height: 40px; }
   #header-logo { font-size: 0.75rem; }
-  #search-input { width: 130px; }
-  #map-wrap { min-height: 70vh; }
-  #right-sidebar { height: 50vh; }
+  #right-sidebar { height: 52vh; }
 }
 </style>
 </head>
@@ -879,7 +899,11 @@ function _loadScript(src) {
 }
 
 function makeProjection(w, h){
-  return d3.geoMercator().center([137, 37]).scale(w * 1.28).translate([w * 0.42, h * 0.52]);
+  const isMobile = w < 600;
+  return d3.geoMercator()
+    .center([137, 37])
+    .scale(w * (isMobile ? 1.10 : 1.28))
+    .translate([w * (isMobile ? 0.50 : 0.42), h * (isMobile ? 0.30 : 0.52)]);
 }
 
 let projFn, pathFn;
