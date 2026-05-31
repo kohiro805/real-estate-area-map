@@ -886,8 +886,8 @@ function makeProjection(w, h){
   const isMobile = w < 600;
   return d3.geoMercator()
     .center([137, 37])
-    .scale(w * (isMobile ? 1.10 : 1.28))
-    .translate([w * (isMobile ? 0.50 : 0.42), h * (isMobile ? 0.30 : 0.52)]);
+    .scale(w * (isMobile ? 1.90 : 1.28))
+    .translate([w * (isMobile ? 0.50 : 0.42), h * (isMobile ? 0.42 : 0.52)]);
 }
 
 let projFn, pathFn;
