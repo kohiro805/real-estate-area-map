@@ -267,6 +267,28 @@ body {
   color: var(--accent-blue);
 }
 
+/* 右下フローティング凡例 */
+#legend-panel {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 10px 12px;
+  backdrop-filter: blur(8px);
+  z-index: 10;
+  min-width: 160px;
+}
+#legend-title {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
 /* Map path colors */
 path.pref, path.muni {
   vector-effect: non-scaling-stroke;
@@ -666,39 +688,16 @@ text.pref-label {
   #search-input { font-size: 0.72rem; padding: 5px 8px; width: 148px; }
   #search-suggestions { width: 200px; }
 
-  /* 投資適合度: タイトル全幅→その下にドットを横一列 */
-  #left-sidebar .sidebar-section:nth-child(2) {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px;
+  /* モバイル: 凡例パネルを小さく調整 */
+  #legend-panel {
+    bottom: 10px;
+    right: 10px;
+    padding: 8px 10px;
+    min-width: 130px;
   }
-  #left-sidebar .sidebar-section:nth-child(2) .sidebar-section-title {
-    flex: 0 0 100%;  /* タイトルが1行目を占有し、ドットが2行目へ */
-  }
-  .leg-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    padding: 0;
-    margin: 0;
-  }
-  .leg-label { display: none; }
-  .leg-sub   { display: none; }
-  .leg-item[data-filter="5"]::after { content: "S"; }
-  .leg-item[data-filter="4"]::after { content: "A"; }
-  .leg-item[data-filter="3"]::after { content: "B"; }
-  .leg-item[data-filter="2"]::after { content: "C"; }
-  .leg-item[data-filter="1"]::after { content: "D"; }
-  .leg-item::after {
-    font-size: 0.65rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    line-height: 1;
-  }
-  /* 未評価行はモバイルで非表示 */
-  #left-sidebar .sidebar-section:nth-child(2) .leg-item:last-child { display: none; }
-  .leg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  #legend-title { font-size: 0.58rem; margin-bottom: 6px; }
+  .leg-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .leg-label { font-size: 0.62rem; }
   /* 未評価ドットのlegend-item */
   .leg-item:last-child .leg-dot { background: #374151; }
 
@@ -780,9 +779,27 @@ text.pref-label {
       <div id="search-suggestions"></div>
     </div>
 
-    <!-- 投資適合度 凡例 -->
+
+    <!-- 地図操作 -->
     <div class="sidebar-section">
-      <div class="sidebar-section-title">📊 投資適合度</div>
+      <div class="sidebar-section-title">🗺 地図操作</div>
+      <button class="ctrl-btn" id="reset-btn" style="width:100%;margin-bottom:6px">🔄 全国表示</button>
+      <div class="map-ctrl-row">
+        <button class="ctrl-btn" id="zoom-in-btn">＋</button>
+        <button class="ctrl-btn" id="zoom-out-btn">−</button>
+        <div id="zoom-ratio-display"><span id="zoom-ratio-text">100%</span></div>
+      </div>
+      <div id="zoom-info" id="zi-hint-text">2.5倍以上に拡大すると市区町村が表示されます</div>
+    </div>
+  </aside>
+
+  <!-- MAP AREA -->
+  <div id="map-wrap">
+    <svg id="map"></svg>
+
+    <!-- 右下フローティング凡例 -->
+    <div id="legend-panel">
+      <div id="legend-title">📊 投資適合度</div>
       <div class="leg-item" data-filter="5">
         <div class="leg-dot" style="background:#b3d9f7"></div>
         <span class="leg-label">★★★★★ S 最優良</span>
@@ -808,24 +825,6 @@ text.pref-label {
         <span class="leg-label">未評価・未収録</span>
       </div>
     </div>
-
-    <!-- 地図操作 -->
-    <div class="sidebar-section">
-      <div class="sidebar-section-title">🗺 地図操作</div>
-      <button class="ctrl-btn" id="reset-btn" style="width:100%;margin-bottom:6px">🔄 全国表示</button>
-      <div class="map-ctrl-row">
-        <button class="ctrl-btn" id="zoom-in-btn">＋</button>
-        <button class="ctrl-btn" id="zoom-out-btn">−</button>
-        <div id="zoom-ratio-display"><span id="zoom-ratio-text">100%</span></div>
-      </div>
-      <div id="zoom-info" id="zi-hint-text">2.5倍以上に拡大すると市区町村が表示されます</div>
-    </div>
-  </aside>
-
-  <!-- MAP AREA -->
-  <div id="map-wrap">
-
-    <svg id="map"></svg>
   </div>
 
   <!-- RIGHT SIDEBAR -->
