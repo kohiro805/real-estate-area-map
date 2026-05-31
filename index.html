@@ -636,50 +636,55 @@ text.pref-label {
   /* メインレイアウト: 縦積み */
   #main-layout { flex-direction: column; }
 
-  /* 左サイドバー: 超コンパクトな1行バー */
+  /* 左サイドバー: 2行コンパクトバー */
   #left-sidebar {
     width: 100%;
     height: auto;
     flex-direction: row;
     flex-wrap: nowrap;
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: visible;
     border-right: none;
     border-bottom: 1px solid var(--border);
-    padding: 4px 8px;
-    gap: 6px;
+    padding: 5px 8px;
+    gap: 12px;
     flex-shrink: 0;
-    align-items: center;
+    align-items: flex-start;
   }
 
-  /* エリア検索のみ表示 */
+  /* 各セクション共通: タイトル上・内容下の2行 */
   .sidebar-section {
     flex-shrink: 0;
     margin-bottom: 0;
     padding: 0;
     border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
   }
-  .sidebar-section-title { display: none; }
-  /* 検索セクションのタイトルのみ表示 */
-  #left-sidebar .sidebar-section:first-child .sidebar-section-title {
+  .sidebar-section-title {
     display: block;
-    font-size: 0.6rem;
+    font-size: 0.58rem;
     white-space: nowrap;
     margin-bottom: 0;
-    margin-right: 4px;
     line-height: 1;
   }
-  /* 検索セクションを横並びに */
-  #left-sidebar .sidebar-section:first-child {
-    display: flex;
+
+  /* エリア検索 */
+  #search-input { font-size: 0.72rem; padding: 5px 8px; width: 148px; }
+  #search-suggestions { width: 200px; }
+
+  /* 投資適合度: タイトル全幅→その下にドットを横一列 */
+  #left-sidebar .sidebar-section:nth-child(2) {
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
     gap: 4px;
   }
-  #search-input { font-size: 0.72rem; padding: 5px 8px; width: 160px; }
-  #search-suggestions { width: 200px; }
-
-  /* 投資適合度: ドットのみの横並び凡例 */
+  #left-sidebar .sidebar-section:nth-child(2) .sidebar-section-title {
+    flex: 0 0 100%;  /* タイトルが1行目を占有し、ドットが2行目へ */
+  }
   .leg-item {
     display: inline-flex;
     align-items: center;
@@ -687,11 +692,8 @@ text.pref-label {
     padding: 0;
     margin: 0;
   }
-  /* 星のみ表示（S/A等と日本語テキストは非表示） */
-  /* 星・説明文を非表示にしてdata-letterだけ表示 */
   .leg-label { display: none; }
   .leg-sub   { display: none; }
-  /* data-filter値からS/A/B/C/Dをpseudo要素で表示 */
   .leg-item[data-filter="5"]::after { content: "S"; }
   .leg-item[data-filter="4"]::after { content: "A"; }
   .leg-item[data-filter="3"]::after { content: "B"; }
@@ -705,29 +707,7 @@ text.pref-label {
   }
   /* 未評価行はモバイルで非表示 */
   #left-sidebar .sidebar-section:nth-child(2) .leg-item:last-child { display: none; }
-  /* 投資適合度タイトルを表示 */
-  #left-sidebar .sidebar-section:nth-child(2) .sidebar-section-title {
-    display: block;
-    font-size: 0.58rem;
-    white-space: nowrap;
-    margin-bottom: 0;
-    margin-right: 4px;
-    line-height: 1;
-  }
-  #left-sidebar .sidebar-section:nth-child(2) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 5px;
-  }
-  .leg-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  /* 凡例セクションを横並びに */
-  #left-sidebar .sidebar-section:nth-child(2) {
-    display: flex;
-    flex-direction: row;
-    gap: 4px;
-    align-items: center;
-  }
+  .leg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   /* 未評価ドットのlegend-item */
   .leg-item:last-child .leg-dot { background: #374151; }
 
@@ -1662,7 +1642,7 @@ function renderMap(japan){
   mapGroup.style('will-change', 'transform');
 
   const zoomBehavior = d3.zoom()
-    .scaleExtent([1, 25])
+    .scaleExtent([1, 80])
     .translateExtent([[-w * 0.3, -h * 0.3], [w * 1.3, h * 1.3]])
     .on('zoom', function(event) {
       // ① transformの適用だけは即時（パン・ピンチをなめらかに）
