@@ -229,11 +229,17 @@ body {
   position: relative;
   overflow: hidden;
   background: #0b1628;
+  touch-action: none;
 }
 #map {
   width: 100%;
   height: 100%;
   display: block;
+  will-change: transform;
+}
+#map path {
+  shape-rendering: optimizeSpeed;
+  vector-effect: non-scaling-stroke;
 }
 
 /* Map toggle button */
@@ -265,7 +271,6 @@ body {
 path.pref, path.muni {
   vector-effect: non-scaling-stroke;
   cursor: pointer;
-  transition: filter 0.15s;
 }
 path.pref {
   stroke: rgba(255,255,255,0.25);
@@ -282,20 +287,24 @@ path.pref.r2, path.muni.r2 { fill: #ffd9a8; }
 path.pref.r1, path.muni.r1 { fill: #ffb3b3; }
 path.pref.r0, path.muni.r0 { fill: #64748b; }
 
-path.pref:hover, path.muni:hover {
-  filter: brightness(1.3) drop-shadow(0 0 6px rgba(255,255,255,0.4));
-  stroke: rgba(255,255,255,0.6);
-  stroke-width: 1px;
+/* ホバー効果はマウス操作のみ（タッチデバイスでは無効） */
+@media (hover: hover) {
+  path.pref, path.muni {
+    transition: filter 0.15s;
+  }
+  path.pref:hover, path.muni:hover {
+    filter: brightness(1.3) drop-shadow(0 0 6px rgba(255,255,255,0.4));
+    stroke: rgba(255,255,255,0.6);
+    stroke-width: 1px;
+  }
 }
 path.pref.active {
   stroke: #3b82f6;
   stroke-width: 2px;
-  filter: brightness(1.2) drop-shadow(0 0 8px rgba(59,130,246,0.5));
 }
 path.muni.selected-muni {
   stroke: #3b82f6;
   stroke-width: 2px;
-  filter: brightness(1.3) drop-shadow(0 0 10px rgba(59,130,246,0.6));
 }
 
 text.pref-label {
@@ -1645,32 +1654,34 @@ function renderMap(japan){
     });
 
   // D3 ズーム設定
+  let _lastZoomK = null;
+  let _zoomRafId = null;
+  const _labelBaseSize = w < 700 ? 5 : 7;
+
+  // mapGroupをGPUレイヤに昇格
+  mapGroup.style('will-change', 'transform');
+
   const zoomBehavior = d3.zoom()
     .scaleExtent([1, 25])
     .translateExtent([[-w * 0.3, -h * 0.3], [w * 1.3, h * 1.3]])
     .on('zoom', function(event) {
+      // ① transformの適用だけは即時（パン・ピンチをなめらかに）
       currentTransform = event.transform;
       mapGroup.attr('transform', event.transform);
 
-      const k = event.transform.k;
-
-      // ラベルを逆スケール（常に同じ見た目サイズに）
-      const labelSize = (w < 700 ? 5 : 7) / k;
-      labelGroup.selectAll('text.pref-label')
-        .style('font-size', labelSize + 'px');
-
-      // 市区町村レイヤは常に表示
-      const showMuni = true;
-      prefGroup.style('opacity', 0.08); // 都道府県境界をごく薄い補助線としてのみ表示
-      muniGroup.style('display', 'block');
-      
-      // 縮小時は文字の重なりを防ぐため都道府県名ラベルを非表示に制御
-      labelGroup.style('display', k >= 2.5 ? 'block' : 'none');
-
-      // 市区町村データを常にロード＆展開
-      loadMunicipalities();
-
-      updateZoomUI(k);
+      // ② それ以外は次のフレームに1回だけ実行
+      if (_zoomRafId) return;
+      _zoomRafId = requestAnimationFrame(() => {
+        _zoomRafId = null;
+        const k = currentTransform.k;
+        if (k !== _lastZoomK) {
+          _lastZoomK = k;
+          labelGroup.selectAll('text.pref-label')
+            .style('font-size', (_labelBaseSize / k) + 'px');
+          labelGroup.style('display', k >= 2.5 ? 'block' : 'none');
+          updateZoomUI(k);
+        }
+      });
     });
 
   svg.call(zoomBehavior);
@@ -1682,12 +1693,12 @@ function renderMap(japan){
 
   applyFilter();
   updatePrefList();
-  
-  // ページ初期ロード時（リロード直後）から強制的に市区町村を表示・展開
-  prefGroup.style('opacity', 0.08); // 都道府県は薄い境界線としてのみ表示
-  muniGroup.style('display', 'block'); // 市区町村レイヤを表示
-  loadMunicipalities(); // 市区町村データをロード・展開
-  
+
+  // 初期ロード時に市区町村を1回だけロード
+  prefGroup.style('opacity', 0.08);
+  muniGroup.style('display', 'block');
+  loadMunicipalities();
+
   updateZoomUI(1);
 
   // resizeの際にzoomBehaviorを保持
