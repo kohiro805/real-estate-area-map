@@ -322,18 +322,14 @@ const HAZARD_LAYERS = {
 let hazardOpacity = 0.7;
 
 // Leaflet マップ初期化
+// エリア特性マップ（D3: center[137,37], translate[w*0.42, h*0.52], scale w*1.28）と
+// 同じ見え方にするため、実質的な中心を逆算: 137 + 0.08/(1.28*π/180) ≈ 140.6°E, zoom≈5
 const isMobile = window.innerWidth < 768;
 const leafletMap = L.map('map', {
-  center: [37.0, 137.0],
-  zoom: 5,
+  center: isMobile ? [35.0, 137.0] : [37.5, 140.5],
+  zoom: isMobile ? 5 : 6,
   zoomControl: false,
 });
-// 日本全体（北海道〜沖縄）が収まるようfitBounds
-leafletMap.fitBounds(
-  isMobile ? [[26.0, 130.0], [46.0, 146.0]]   // モバイル
-           : [[30.0, 129.5], [46.0, 146.0]],   // PC
-  { padding: [15, 15] }
-);
 
 // 国土地理院 淡色地図
 L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
@@ -355,10 +351,10 @@ leafletMap.on('zoom', () => {
 document.getElementById('zoom-in-btn').onclick  = () => leafletMap.zoomIn();
 document.getElementById('zoom-out-btn').onclick = () => leafletMap.zoomOut();
 document.getElementById('reset-btn').onclick = () => {
-  leafletMap.fitBounds(
-    isMobile ? [[26.0, 130.0], [46.0, 146.0]]
-             : [[30.0, 129.5], [46.0, 146.0]],
-    { padding: [15, 15] }
+  leafletMap.setView(
+    isMobile ? [35.0, 137.0] : [37.5, 140.5],
+    isMobile ? 5 : 6,
+    { animate: false }
   );
 };
 
