@@ -679,10 +679,10 @@ text.pref-label {
     line-height: 1;
   }
 
-  /* エリア検索: 全幅 */
+  /* エリア検索: 全幅・font-size:16px必須（iOS自動ズーム防止） */
   #search-input {
     width: 100%;
-    font-size: 0.82rem;
+    font-size: 16px;
     padding: 8px 12px;
     box-sizing: border-box;
   }
@@ -2141,8 +2141,12 @@ function zoomToCity(lat, lng) {
   const [sx, sy] = projFn([lng, lat]);
   const w = getW(), h = getH();
   const scale = 10;
+  // モバイルは下パネル(48vh)が地図に重なるため、
+  // 見える範囲の中央(上から約22%)に市区町村を配置する
+  const isMobile = w < 600;
+  const yCenter = isMobile ? h * 0.22 : h * 0.50;
   const tx = w / 2 - scale * sx;
-  const ty = h / 2 - scale * sy;
+  const ty = yCenter - scale * sy;
   const transform = d3.zoomIdentity.translate(tx, ty).scale(scale);
   svg.transition().duration(800).call(svg.__zoom_behavior.transform, transform);
 }
