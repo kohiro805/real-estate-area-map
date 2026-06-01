@@ -2,38 +2,66 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="エリア特性マップ">
+<meta name="theme-color" content="#1c1c1e">
+<link rel="manifest" href="manifest.json">
 <title>🗾 エリア特性マップ</title>
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after {
+  box-sizing: border-box; margin: 0; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
 
 :root {
   --bg-primary: #1c1c1e;
-  --bg-secondary: rgba(255,255,255,0.04);
+  --bg-panel: rgba(28,28,30,0.70);
   --bg-glass: rgba(255,255,255,0.05);
   --border: rgba(255,255,255,0.15);
-  --border-active: rgba(255,255,255,0.35);
+  --border-active: rgba(255,255,255,0.40);
   --text-primary: #ffffff;
   --text-secondary: #d0d0d0;
-  --text-dim: #8e8e93;
+  --text-dim: #636366;
   --accent-blue: #0a84ff;
+  --accent-indigo: #5e5ce6;
   --accent-orange: #ff9500;
-  --accent-green: #30d158;
+  --accent-green: #32d74b;
+  --danger: #ff453a;
   --shadow: rgba(0,0,0,0.65);
 }
 
 body {
-  font-family: "SF Pro Rounded","SF Pro Display","SF Pro Text",
-    -apple-system, BlinkMacSystemFont,"Helvetica Neue",
-    'Hiragino Kaku Gothic Pro','Yu Gothic',Meiryo,sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont,
+    "SF Pro Rounded","SF Pro Display","SF Pro Text",
+    "Helvetica Neue", 'Hiragino Kaku Gothic Pro','Yu Gothic',Meiryo,sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
+  min-height: 100dvh;
   height: 100vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  overflow-x: hidden;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg-primary: #ffffff;
+    --bg-panel: rgba(0,0,0,0.03);
+    --bg-glass: rgba(0,0,0,0.04);
+    --border: rgba(0,0,0,0.08);
+    --border-active: rgba(0,0,0,0.20);
+    --text-primary: #1c1c1e;
+    --text-secondary: #636366;
+    --text-dim: #8e8e93;
+    --accent-blue: #007aff;
+    --shadow: rgba(0,0,0,0.15);
+  }
 }
 
 /* ========== HEADER ========== */
@@ -141,7 +169,7 @@ body {
 #left-sidebar {
   width: 280px;
   flex-shrink: 0;
-  background: rgba(28,28,30,0.7);
+  background: var(--bg-panel);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-right: 1px solid var(--border);
@@ -400,7 +428,7 @@ text.pref-label {
 #right-sidebar {
   width: 360px;
   flex-shrink: 0;
-  background: rgba(28,28,30,0.75);
+  background: var(--bg-panel);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-left: 1px solid var(--border);
@@ -714,18 +742,17 @@ text.pref-label {
 /* ========== MOBILE RESPONSIVE ========== */
 @media (max-width: 768px) {
 
-  /* ボトムナビ */
+  /* ボトムナビ（デザインシステム仕様） */
   #bottom-nav {
     display: flex;
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    height: 56px;
-    background: rgba(28,28,30,0.92);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-top: 1px solid var(--border);
+    background: rgba(28,28,30,0.95);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border-top: 1px solid rgba(255,255,255,0.12);
     z-index: 1000;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding: 8px 0 calc(env(safe-area-inset-bottom, 0px) + 8px);
   }
   .bnav-item {
     flex: 1;
@@ -733,22 +760,37 @@ text.pref-label {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    gap: 4px;
     text-decoration: none;
     color: var(--text-dim);
     transition: all 140ms ease;
     padding: 6px 4px;
+    border-radius: 12px;
+    margin: 0 4px;
+    border: 1px solid transparent;
+    background: rgba(255,255,255,0.02);
+    backdrop-filter: blur(16px);
+    font-size: 15px;
+    font-weight: 500;
   }
-  .bnav-item.active { color: var(--accent-blue); }
-  .bnav-item:not(.active):hover { color: var(--text-secondary); }
+  .bnav-item.active {
+    color: var(--accent-blue);
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.15);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  }
+  .bnav-item:not(.active):active {
+    background: rgba(255,255,255,0.06);
+    transform: scale(0.95);
+  }
   .bnav-icon { font-size: 1.2rem; line-height: 1; }
-  .bnav-label { font-size: 0.58rem; font-weight: 600; letter-spacing: 0.01em; }
+  .bnav-label { font-size: 13px; font-weight: 500; letter-spacing: 0.01em; }
 
   /* ヘッダーのタブは非表示 */
   #header-right { display: none; }
 
-  /* ボトムナビ分の余白 */
-  #main-layout { padding-bottom: 56px; }
+  /* ボトムナビ分の余白（デザインシステム: 120px推奨） */
+  #main-layout { padding-bottom: 80px; }
 
   header {
     height: 44px;

@@ -1,0 +1,19 @@
+{
+  "name": "エリア特性マップ",
+  "short_name": "エリア特性",
+  "description": "不動産投資エリアの適合度・人口動態を可視化するマップアプリ",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1c1c1e",
+  "theme_color": "#1c1c1e",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f5fe.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["utilities", "finance"],
+  "lang": "ja"
+}
