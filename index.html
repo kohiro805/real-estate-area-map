@@ -116,6 +116,36 @@ body {
     background: rgba(255,255,255,0.95) !important;
     border-top-color: rgba(0,0,0,0.10) !important;
   }
+
+  /* スコア内訳ボックス（インラインスタイルをoverrideするため!important） */
+  .score-details {
+    background: rgba(0,0,0,0.04) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid rgba(0,0,0,0.08) !important;
+  }
+  .score-details strong { color: var(--text-primary) !important; }
+  .score-details span   { color: var(--text-secondary) !important; }
+
+  /* 投資適合度エリアの区切り線・サブテキスト */
+  #rating-score { border-bottom-color: rgba(0,0,0,0.08) !important; }
+  #rating-score strong { color: var(--accent-orange) !important; }
+  #rating-score span, #rating-score div { color: var(--text-dim) !important; }
+
+  /* パネル内のハードコード色の上書き */
+  #panel-body .data-label span,
+  #panel-body [style*="color:#64748b"],
+  #panel-body [style*="color: #64748b"] { color: var(--text-dim) !important; }
+  #panel-body [style*="color:#94a3b8"],
+  #panel-body [style*="color: #94a3b8"] { color: var(--text-secondary) !important; }
+  #panel-body [style*="color:#f1f5f9"],
+  #panel-body [style*="color: #f1f5f9"] { color: var(--text-primary) !important; }
+  #panel-body [style*="color:#cbd5e1"],
+  #panel-body [style*="color: #cbd5e1"] { color: var(--text-secondary) !important; }
+  #panel-body [style*="border-bottom: 1px solid rgba(255,255,255,"] { border-bottom-color: rgba(0,0,0,0.08) !important; }
+
+  /* エリア特徴のテキスト */
+  #panel-body [style*="color:var(--text-secondary)"],
+  #panel-body p, #panel-body li { color: var(--text-primary) !important; }
 }
 
 /* ========== HEADER ========== */
@@ -1005,7 +1035,7 @@ text.pref-label {
   #panel-header { padding: 8px 12px 6px; }
   #panel-city-name { font-size: 1.05rem; }
   #panel-pref-name { font-size: 0.6rem; }
-  #panel-body { padding: 8px 12px; }
+  #panel-body { padding: 8px 12px calc(96px + env(safe-area-inset-bottom, 0px)); }
   .panel-card { padding: 8px; margin-bottom: 6px; }
   .data-row { font-size: 0.7rem; padding: 3px 0; }
   .data-val-num { font-size: 0.75rem; }
@@ -2289,24 +2319,24 @@ function openCityPanel(cityName, prefName, areaData) {
         <div id="rating-stars" style="margin-bottom: 0;">${stars}</div>
         <span class="rank-badge ${rank.cls}" style="position: static; margin: 0;">${rank.label}</span>
       </div>
-      <div id="rating-score" style="margin-bottom: 12px; font-size: 0.82rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">
-        総合スコア: <strong style="color:#fbbf24; font-size: 1.05rem;">${totalScore}</strong> <span style="font-size:0.65rem; color:#94a3b8">/ 100</span>
-        <div style="font-size: 0.58rem; color: #64748b; margin-top: 3px; font-weight: normal;">※人口・人口動態の2軸均等平均で算出</div>
+      <div id="rating-score" style="margin-bottom: 12px; font-size: 0.82rem; border-bottom: 1px solid var(--border-sub); padding-bottom: 8px;">
+        総合スコア: <strong style="color:var(--accent-orange); font-size: 1.05rem;">${totalScore}</strong> <span style="font-size:0.65rem; color:var(--text-dim)">/ 100</span>
+        <div style="font-size: 0.58rem; color: var(--text-dim); margin-top: 3px; font-weight: normal;">※人口・人口動態の2軸均等平均で算出</div>
       </div>
       
       <!-- スコア内訳 -->
-      <div class="score-details" style="font-size: 0.7rem; color: #cbd5e1; background: rgba(0,0,0,0.18); border-radius: 4px; padding: 10px;">
-        <div style="font-weight: 700; color: #94a3b8; margin-bottom: 6px; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center;">
+      <div class="score-details" style="font-size: 0.7rem; color: var(--text-secondary); background: var(--bg-glass); border-radius: 8px; padding: 10px; border: 1px solid var(--border-sub);">
+        <div style="font-weight: 700; color: var(--text-dim); margin-bottom: 6px; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center;">
           <span>スコア内訳</span>
-          <span style="font-weight: 500; text-transform: none; font-size: 0.58rem; color: #64748b;">(2軸均等平均)</span>
+          <span style="font-weight: 500; text-transform: none; font-size: 0.58rem; color: var(--text-dim);">(2軸均等平均)</span>
         </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 4px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px; border-bottom: 1px solid var(--border-sub); padding-bottom: 4px;">
           <span>👥 人口スコア:</span>
-          <strong style="color: #f1f5f9;">${typeof popScore === 'number' ? popScore.toFixed(1) : popScore}点</strong>
+          <strong style="color: var(--text-primary);">${typeof popScore === 'number' ? popScore.toFixed(1) : popScore}点</strong>
         </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 4px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px; border-bottom: 1px solid var(--border-sub); padding-bottom: 4px;">
           <span>📈 将来人口スコア:</span>
-          <strong style="color: #f1f5f9;">${typeof demoScore === 'number' ? demoScore.toFixed(1) : demoScore}点</strong>
+          <strong style="color: var(--text-primary);">${typeof demoScore === 'number' ? demoScore.toFixed(1) : demoScore}点</strong>
         </div>
       </div>
     </div>
