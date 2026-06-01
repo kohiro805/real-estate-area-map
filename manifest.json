@@ -1,6 +1,6 @@
 {
   "name": "エリア特性マップ",
-  "short_name": "エリア特性",
+  "short_name": "不動産マップ",
   "description": "不動産投資エリアの適合度・人口動態を可視化するマップアプリ",
   "start_url": "./index.html",
   "display": "standalone",
