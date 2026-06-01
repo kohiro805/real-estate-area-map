@@ -1040,6 +1040,10 @@ text.pref-label {
   .data-row { font-size: 0.7rem; padding: 3px 0; }
   .data-val-num { font-size: 0.75rem; }
   .score-details { font-size: 0.65rem; }
+  /* ローディングバッジをボトムナビの上に表示 */
+  #loading-badge {
+    bottom: calc(110px + env(safe-area-inset-bottom, 0px));
+  }
 
   /* フローティングウィンドウ */
   #tip { max-width: 88vw; font-size: 0.68rem; }
