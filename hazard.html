@@ -313,45 +313,45 @@ body {
     <div id="landslide-legend" style="display:none;position:absolute;bottom:16px;right:16px;background:rgba(15,23,42,0.90);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 12px;backdrop-filter:blur(8px);z-index:500;min-width:175px;">
       <div style="font-size:0.6rem;font-weight:700;color:#94a3b8;letter-spacing:0.08em;margin-bottom:8px;">⛰ 土砂災害警戒区域</div>
       <div style="display:flex;flex-direction:column;gap:6px;">
-        <!-- 急傾斜地の崩壊 -->
+        <!-- 急傾斜地の崩壊: 特別=赤, 警戒=黄 -->
         <div>
           <div style="font-size:0.68rem;color:#f1f5f9;font-weight:600;margin-bottom:3px;">急傾斜地の崩壊</div>
           <div style="display:flex;gap:6px;">
             <div style="display:flex;align-items:center;gap:5px;">
-              <div style="width:14px;height:14px;border-radius:2px;background:#FFE100;flex-shrink:0;"></div>
-              <span style="font-size:0.65rem;color:#94a3b8;">警戒区域</span>
+              <div style="width:14px;height:14px;border-radius:2px;background:#FFD700;flex-shrink:0;"></div>
+              <span style="font-size:0.65rem;color:#94a3b8;">警戒</span>
             </div>
             <div style="display:flex;align-items:center;gap:5px;">
-              <div style="width:14px;height:14px;border-radius:2px;background:#FF0000;flex-shrink:0;"></div>
-              <span style="font-size:0.65rem;color:#94a3b8;">特別警戒区域</span>
+              <div style="width:14px;height:14px;border-radius:2px;background:#FF2800;flex-shrink:0;"></div>
+              <span style="font-size:0.65rem;color:#94a3b8;">特別警戒</span>
             </div>
           </div>
         </div>
-        <!-- 土石流 -->
+        <!-- 土石流: 特別=暗赤, 警戒=黄 -->
         <div>
           <div style="font-size:0.68rem;color:#f1f5f9;font-weight:600;margin-bottom:3px;">土石流</div>
           <div style="display:flex;gap:6px;">
             <div style="display:flex;align-items:center;gap:5px;">
-              <div style="width:14px;height:14px;border-radius:2px;background:#FFE100;flex-shrink:0;"></div>
-              <span style="font-size:0.65rem;color:#94a3b8;">警戒区域</span>
+              <div style="width:14px;height:14px;border-radius:2px;background:#FFD700;flex-shrink:0;"></div>
+              <span style="font-size:0.65rem;color:#94a3b8;">警戒</span>
             </div>
             <div style="display:flex;align-items:center;gap:5px;">
-              <div style="width:14px;height:14px;border-radius:2px;background:#FF0000;flex-shrink:0;"></div>
-              <span style="font-size:0.65rem;color:#94a3b8;">特別警戒区域</span>
+              <div style="width:14px;height:14px;border-radius:2px;background:#8B0000;flex-shrink:0;"></div>
+              <span style="font-size:0.65rem;color:#94a3b8;">特別警戒</span>
             </div>
           </div>
         </div>
-        <!-- 地すべり -->
+        <!-- 地すべり: 特別=マゼンタ, 警戒=オレンジ -->
         <div>
           <div style="font-size:0.68rem;color:#f1f5f9;font-weight:600;margin-bottom:3px;">地すべり</div>
           <div style="display:flex;gap:6px;">
             <div style="display:flex;align-items:center;gap:5px;">
-              <div style="width:14px;height:14px;border-radius:2px;background:#FFE100;flex-shrink:0;"></div>
-              <span style="font-size:0.65rem;color:#94a3b8;">警戒区域</span>
+              <div style="width:14px;height:14px;border-radius:2px;background:#FF8C00;flex-shrink:0;"></div>
+              <span style="font-size:0.65rem;color:#94a3b8;">警戒</span>
             </div>
             <div style="display:flex;align-items:center;gap:5px;">
-              <div style="width:14px;height:14px;border-radius:2px;background:#FF0000;flex-shrink:0;"></div>
-              <span style="font-size:0.65rem;color:#94a3b8;">特別警戒区域</span>
+              <div style="width:14px;height:14px;border-radius:2px;background:#FF008C;flex-shrink:0;"></div>
+              <span style="font-size:0.65rem;color:#94a3b8;">特別警戒</span>
             </div>
           </div>
         </div>
@@ -499,14 +499,19 @@ slider.addEventListener('input', e => {
 
 // 凡例の表示制御
 function updateFloodLegend() {
-  const floodOn = document.getElementById('cb-flood').checked;
+  // 洪水深さ凡例: 洪水・高潮・津波のいずれかがONなら表示（重複なし）
+  const floodOn = document.getElementById('cb-flood').checked
+               || document.getElementById('cb-storm').checked
+               || document.getElementById('cb-tsunami').checked;
   const landOn  = document.getElementById('cb-landslide').checked;
-  // 両方ONの場合は洪水を右下、土砂を少し上に
+
   document.getElementById('flood-legend').style.display = floodOn ? 'block' : 'none';
   document.getElementById('landslide-legend').style.display = landOn ? 'block' : 'none';
-  // 両方表示の場合は土砂を上にずらす
+
+  // 両方表示の場合は土砂凡例を洪水凡例の上に
   if (floodOn && landOn) {
-    document.getElementById('landslide-legend').style.bottom = (16 + document.getElementById('flood-legend').offsetHeight + 8) + 'px';
+    document.getElementById('landslide-legend').style.bottom =
+      (16 + document.getElementById('flood-legend').offsetHeight + 8) + 'px';
   } else {
     document.getElementById('landslide-legend').style.bottom = '16px';
   }
@@ -518,8 +523,9 @@ toggleHazard('flood', true);
 updateFloodLegend();
 
 // チェック変更時に凡例も連動
-document.getElementById('cb-flood').addEventListener('change', updateFloodLegend);
-document.getElementById('cb-landslide').addEventListener('change', updateFloodLegend);
+['cb-flood','cb-landslide','cb-storm','cb-tsunami'].forEach(id => {
+  document.getElementById(id).addEventListener('change', updateFloodLegend);
+});
 
 // ──── 地区検索（国土地理院 アドレス検索API）────────────────────────────
 const searchInput = document.getElementById('search-input');
