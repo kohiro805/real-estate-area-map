@@ -634,7 +634,6 @@ text.pref-label {
 /* Rating Section */
 #rating-stars {
   font-size: 1.4rem;
-  color: #fbbf24;
   letter-spacing: 2px;
   margin-bottom: 6px;
 }
@@ -1314,6 +1313,14 @@ let projFn, pathFn;
 let mapGroup, prefGroup, muniGroup, labelGroup;
 
 const STARS = r => '★'.repeat(r) + '☆'.repeat(5 - r);
+
+// 評価別の星カラー（マップの塗り色と統一）
+const STAR_COLORS = { 5:'#b3d9f7', 4:'#b3f0b3', 3:'#fff4b0', 2:'#ffd9a8', 1:'#ffb3b3', 0:'#64748b' };
+const STARS_HTML = (r) => {
+  const c = STAR_COLORS[r] || '#64748b';
+  const dim = 'rgba(255,255,255,0.18)';
+  return `<span style="color:${c}">${'★'.repeat(r)}</span><span style="color:${dim}">${'☆'.repeat(5-r)}</span>`;
+};
 
 const RATING_LABELS = {
   5: '⭐⭐⭐⭐⭐ 最優良 (SS・S)',
@@ -2405,7 +2412,7 @@ function openCityPanel(cityName, prefName, areaData) {
   const rating = areaData.rating || 0;
   const score = calcScore(rating);
   const rank = getRankInfo(rating);
-  const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+  const stars = STARS_HTML(rating);
   const strengths = generateStrengths(areaData);
   const risks = generateRisks(areaData);
 
