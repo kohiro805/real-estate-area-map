@@ -6,8 +6,6 @@
 <title>🗾 不動産エリア特性マップ | AI-Driven Market Intelligence</title>
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -237,31 +235,12 @@ body {
   width: 100%;
   height: 100%;
   display: block;
+  will-change: transform;
 }
-/* Leaflet overlay pane の D3 パスに既存スタイルを継承 */
-.leaflet-overlay-pane path.pref,
-.leaflet-overlay-pane path.muni {
+#map path {
   shape-rendering: optimizeSpeed;
   vector-effect: non-scaling-stroke;
-  cursor: pointer;
-  pointer-events: all;
 }
-.leaflet-overlay-pane path.pref {
-  stroke: rgba(255,255,255,0.25);
-  stroke-width: 0.8px;
-}
-.leaflet-overlay-pane path.muni {
-  stroke: rgba(180,180,180,0.45);
-  stroke-width: 0.6px;
-}
-/* Leaflet attribution の z-index 調整 */
-.leaflet-control-attribution {
-  z-index: 10 !important;
-  font-size: 0.6rem !important;
-  background: rgba(15,23,42,0.75) !important;
-  color: #94a3b8 !important;
-}
-.leaflet-control-attribution a { color: #93c5fd !important; }
 
 /* Map toggle button */
 #pref-border-toggle {
@@ -652,11 +631,6 @@ text.pref-label {
   text-align: center;
 }
 
-/* Hazard layer controls */
-.hazard-toggle { display:flex; align-items:center; gap:6px; font-size:0.75rem; color:var(--text-primary); cursor:pointer; padding:3px 0; }
-.hazard-toggle input { accent-color:#3b82f6; width:14px; height:14px; flex-shrink:0; }
-.hazard-opacity-row { display:flex; align-items:center; gap:6px; margin-top:6px; }
-
 /* Scrollbar for left sidebar */
 #left-sidebar { overflow-y: auto; }
 #left-sidebar::-webkit-scrollbar { width: 4px; }
@@ -819,23 +793,6 @@ text.pref-label {
     </div>
 
 
-    <!-- ハザードマップ -->
-    <div class="sidebar-section" id="hazard-section">
-      <div class="sidebar-section-title">⚠️ ハザードマップ</div>
-      <div id="hazard-controls">
-        <label class="hazard-toggle"><input type="checkbox" data-key="flood"/>     🌊 洪水浸水</label>
-        <label class="hazard-toggle"><input type="checkbox" data-key="landslide"/> ⛰ 土砂災害</label>
-        <label class="hazard-toggle"><input type="checkbox" data-key="storm"/>     🌀 高潮浸水</label>
-        <label class="hazard-toggle"><input type="checkbox" data-key="tsunami"/>   🔴 津波浸水</label>
-        <div class="hazard-opacity-row">
-          <span style="font-size:0.65rem;color:#94a3b8">透過率</span>
-          <input type="range" id="hazard-opacity" min="0" max="1" step="0.05" value="0.65" style="flex:1">
-          <span id="hazard-opacity-val" style="font-size:0.65rem;color:#94a3b8;width:32px">65%</span>
-        </div>
-        <div style="font-size:0.6rem;color:#64748b;margin-top:5px;">※ zoom 8以上で表示</div>
-      </div>
-    </div>
-
     <!-- 地図操作 -->
     <div class="sidebar-section">
       <div class="sidebar-section-title">🗺 地図操作</div>
@@ -851,7 +808,7 @@ text.pref-label {
 
   <!-- MAP AREA -->
   <div id="map-wrap">
-    <div id="map"></div>
+    <svg id="map"></svg>
 
     <!-- 右下フローティング凡例 -->
     <div id="legend-panel">
@@ -930,69 +887,16 @@ function _loadScript(src) {
   });
 }
 
-// Leaflet ベースのパスジェネレータ
-let leafletMap = null;   // Leaflet map インスタンス
-let svgOverlay = null;   // Leaflet overlay pane 内の SVG 要素 (d3 selection)
-let mainG = null;        // svgOverlay 内の <g> (transform 管理)
+function makeProjection(w, h){
+  const isMobile = w < 600;
+  return d3.geoMercator()
+    .center([137, 37])
+    .scale(w * (isMobile ? 3.0 : 1.28))
+    .translate([w * (isMobile ? 0.46 : 0.42), h * (isMobile ? 0.46 : 0.52)]);
+}
 
 let projFn, pathFn;
 let mapGroup, prefGroup, muniGroup, labelGroup;
-
-function makeLeafletProjection() {
-  return d3.geoTransform({
-    point: function(x, y) {
-      if (!leafletMap) return;
-      const pt = leafletMap.latLngToLayerPoint([y, x]);
-      this.stream.point(pt.x, pt.y);
-    }
-  });
-}
-
-function updatePathFn() {
-  pathFn = d3.geoPath().projection(makeLeafletProjection());
-}
-
-// ハザードレイヤー定義
-const HAZARD_LAYERS = {
-  flood:     { label: '🌊 洪水浸水想定', url: 'https://disaportaldata.gsi.go.jp/raster/01_flood_l2_shinsuishin_data/{z}/{x}/{y}.png', layer: null },
-  landslide: { label: '⛰ 土砂災害警戒', url: 'https://disaportaldata.gsi.go.jp/raster/05_doshasaigai/{z}/{x}/{y}.png',             layer: null },
-  storm:     { label: '🌀 高潮浸水想定', url: 'https://disaportaldata.gsi.go.jp/raster/03_takashio_data/{z}/{x}/{y}.png',            layer: null },
-  tsunami:   { label: '🔴 津波浸水想定', url: 'https://disaportaldata.gsi.go.jp/raster/04_tsunami_new_data/{z}/{x}/{y}.png',         layer: null },
-};
-let hazardOpacity = 0.65;
-
-function toggleHazardLayer(key, enabled) {
-  const h = HAZARD_LAYERS[key];
-  if (!h || !leafletMap) return;
-
-  // D3 SVGオーバーレイ（overlayPane z-index:400）の上にハザードを表示するカスタムペイン
-  if (!leafletMap.getPane('hazardPane')) {
-    leafletMap.createPane('hazardPane');
-    leafletMap.getPane('hazardPane').style.zIndex = 450;
-    leafletMap.getPane('hazardPane').style.pointerEvents = 'none';
-  }
-
-  if (enabled) {
-    if (!h.layer) {
-      h.layer = L.tileLayer(h.url, {
-        opacity: hazardOpacity,
-        maxZoom: 18,
-        pane: 'hazardPane',
-        attribution: '<a href="https://disaportal.gsi.go.jp/">国土交通省ハザードマップポータル</a>'
-      });
-    }
-    h.layer.addTo(leafletMap);
-  } else {
-    if (h.layer) leafletMap.removeLayer(h.layer);
-  }
-}
-
-function setHazardOpacity(val) {
-  hazardOpacity = val;
-  Object.values(HAZARD_LAYERS).forEach(h => {
-    if (h.layer && leafletMap && leafletMap.hasLayer(h.layer)) h.layer.setOpacity(val);
-  });
-}
 
 const STARS = r => '★'.repeat(r) + '☆'.repeat(5 - r);
 
@@ -1145,21 +1049,15 @@ const MUNI_TOPO_URL = 'https://media.githubusercontent.com/media/wmgeolab/geoBou
 
 let activeFilter = null;
 let selected = null;
-const MUNI_THRESHOLD = 9; // Leaflet zoom level のしきい値
+let currentTransform = d3.zoomIdentity;
+const MUNI_THRESHOLD = 2.5; // ズーム倍率のしきい値
 let muniTopoData = null;     // ロード済み TopoJSON
 let muniFeatures = null;     // 処理済みフィーチャ配列（rating付き）
 let _cityLookup = {};        // 市区町村名 → フルエリアオブジェクト（グローバル）
 let muniLoading = false;
 let prefFeatures = [];       // 都道府県フィーチャ（空間判定用）
 
-// svg は Leaflet 初期化後に svgOverlay として設定されるため、
-// 後方互換のために参照を保持するプロキシオブジェクト
-const _svgProxy = {
-  selectAll: function(...args) {
-    if (svgOverlay) return svgOverlay.selectAll(...args);
-    return d3.selectAll([]);
-  }
-};
+const svg = d3.select('#map');
 const mapWrap = document.getElementById('map-wrap');
 const popup = document.getElementById('popup');
 const overlay = document.getElementById('overlay');
@@ -1613,55 +1511,38 @@ function renderAllMuni() {
   applyFilter();
 }
 
-/* --- ズームUI更新 (Leaflet zoom level ベース) --- */
-function updateZoomUI(z) {
+/* --- ズームUI更新 --- */
+function updateZoomUI(k) {
   const levelEl = document.getElementById('zi-level-text');
-  const hintEl  = document.getElementById('zi-hint-text');
-  if (!levelEl || !hintEl) return;
-  const isMuni = z >= MUNI_THRESHOLD;
+  const hintEl = document.getElementById('zi-hint-text');
+  if (!levelEl || !hintEl) return; // Safety Guard
+  const isMuni = k >= MUNI_THRESHOLD;
   levelEl.textContent = isMuni
-    ? `🏙 市区町村表示 (zoom ${z})`
-    : `🗾 都道府県表示 (zoom ${z})`;
+    ? `🏙 市区町村表示 (×${k.toFixed(1)})`
+    : `🗾 都道府県表示 (×${k.toFixed(1)})`;
   hintEl.textContent = isMuni
-    ? '市区町村ごとに投資適合度を色分け表示'
-    : 'zoom 9以上に拡大すると市区町村が表示されます';
+    ? '市区町村ごとに投資適合度を色分け表示' 
+    : '2.5倍以上に拡大すると市区町村が表示されます';
 }
 
-/* --- Leaflet イベントで D3 を再投影 --- */
-function redrawD3() {
-  if (!leafletMap || !pathFn) return;
-  updatePathFn();
-  if (prefGroup) prefGroup.selectAll('path.pref').attr('d', pathFn);
-  if (muniGroup) muniGroup.selectAll('path.muni').attr('d', pathFn);
-  if (labelGroup) {
-    labelGroup.selectAll('text.pref-label').each(function(d) {
-      try {
-        const centroid = pathFn.centroid(d);
-        if (centroid && !isNaN(centroid[0])) {
-          d3.select(this).attr('x', centroid[0]).attr('y', centroid[1]);
-        }
-      } catch(e) {}
-    });
-  }
-}
-
-/* --- メインマップ描画 (Leaflet overlay pane 内の D3 SVG に描く) --- */
+/* --- メインマップ描画 --- */
 function renderMap(japan){
   _debug.startTime = performance.now();
+  const w = getW(), h = getH();
+  projFn = makeProjection(w, h);
+  pathFn = d3.geoPath().projection(projFn);
 
-  if (!mainG) return; // Leaflet 初期化前は何もしない
+  svg.attr('viewBox', `0 0 ${w} ${h}`);
+  svg.selectAll('*').remove();
+
+  // ズームグループ
+  mapGroup = svg.append('g').attr('id', 'map-group');
+  prefGroup = mapGroup.append('g').attr('id', 'pref-group');
+  muniGroup = mapGroup.append('g').attr('id', 'muni-group');
+  labelGroup = mapGroup.append('g').attr('id', 'label-group');
 
   const features = topojson.feature(japan, japan.objects.japan).features;
   prefFeatures = features;
-
-  // グループ初期化（再描画対応）
-  mapGroup.selectAll('*').remove();
-  prefGroup  = mapGroup.append('g').attr('class', 'pref-group').style('pointer-events', 'auto');
-  muniGroup  = mapGroup.append('g').attr('class', 'muni-group').style('display', 'none').style('pointer-events', 'auto');
-  labelGroup = mapGroup.append('g').attr('class', 'label-group');
-
-  // パスジェネレータを更新
-  updatePathFn();
 
   // 都道府県パス
   prefGroup.selectAll('path.pref')
@@ -1695,16 +1576,16 @@ function renderMap(japan){
             &nbsp;｜&nbsp; 最高評価: <strong style="color: #fbbf24;">${STARS(maxR)}</strong>
           </div>
           <div style="font-size: 0.65rem; color: #64748b; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 6px; line-height: 1.4;">
-            🔍 ズームイン（zoom 9以上）で市区町村ごとの詳細評価が表示されます。
+            🔍 ズームイン（2.5倍以上）で市区町村ごとの詳細評価が表示されます。
           </div>
         `;
       } else {
         html += `<div id="tip-info" style="color: #64748b;">データなし</div>`;
       }
-
+      
       tip.innerHTML = html;
       tip.style.display = 'block';
-
+      
       let left = event.clientX + 14;
       let top = event.clientY - 12;
       if (left + 280 > window.innerWidth) {
@@ -1733,13 +1614,11 @@ function renderMap(japan){
       let bestPoly = null, bestArea = -1;
       geom.coordinates.forEach(polyCoords => {
         const f = { type: 'Feature', geometry: { type: 'Polygon', coordinates: polyCoords } };
-        try {
-          const b = pathFn.bounds(f);
-          if (b[0][0] !== Infinity) {
-            const a = (b[1][0] - b[0][0]) * (b[1][1] - b[0][1]);
-            if (a > bestArea) { bestArea = a; bestPoly = f; }
-          }
-        } catch(e) {}
+        const b = pathFn.bounds(f);
+        if (b[0][0] !== Infinity) {
+          const a = (b[1][0] - b[0][0]) * (b[1][1] - b[0][1]);
+          if (a > bestArea) { bestArea = a; bestPoly = f; }
+        }
       });
       if (bestPoly) return pathFn.centroid(bestPoly);
     }
@@ -1751,11 +1630,13 @@ function renderMap(japan){
     .enter()
     .append('text')
     .attr('class', 'pref-label')
-    .attr('x', d => { try { return getLabelCentroid(d)[0]; } catch(e) { return 0; } })
-    .attr('y', d => { try { return getLabelCentroid(d)[1]; } catch(e) { return 0; } })
+    .attr('transform', d => {
+      const c = getLabelCentroid(d);
+      return `translate(${c[0]},${c[1]})`;
+    })
     .attr('text-anchor', 'middle')
     .attr('dominant-baseline', 'middle')
-    .style('font-size', '10px')
+    .style('font-size', w < 700 ? '5px' : '7px')
     .style('fill', '#1f2937')
     .style('font-weight', '600')
     .style('pointer-events', 'none')
@@ -1765,9 +1646,56 @@ function renderMap(japan){
       return n.replace('県','').replace('都','').replace('府','').substring(0,3);
     });
 
+  // D3 ズーム設定
+  let _lastZoomK = null;
+  let _zoomRafId = null;
+  const _labelBaseSize = w < 700 ? 5 : 7;
+
+  // mapGroupをGPUレイヤに昇格
+  mapGroup.style('will-change', 'transform');
+
+  const zoomBehavior = d3.zoom()
+    .scaleExtent([1, 80])
+    .translateExtent([[-w * 0.3, -h * 0.3], [w * 1.3, h * 1.3]])
+    .on('zoom', function(event) {
+      // ① transformの適用だけは即時（パン・ピンチをなめらかに）
+      currentTransform = event.transform;
+      mapGroup.attr('transform', event.transform);
+
+      // ② それ以外は次のフレームに1回だけ実行
+      if (_zoomRafId) return;
+      _zoomRafId = requestAnimationFrame(() => {
+        _zoomRafId = null;
+        const k = currentTransform.k;
+        if (k !== _lastZoomK) {
+          _lastZoomK = k;
+          labelGroup.selectAll('text.pref-label')
+            .style('font-size', (_labelBaseSize / k) + 'px');
+          labelGroup.style('display', k >= 2.5 ? 'block' : 'none');
+          updateZoomUI(k);
+        }
+      });
+    });
+
+  svg.call(zoomBehavior);
+
+  // リセットボタン
+  document.getElementById('reset-btn').onclick = () => {
+    svg.transition().duration(500).call(zoomBehavior.transform, d3.zoomIdentity);
+  };
+
   applyFilter();
   updatePrefList();
-  redrawD3();
+
+  // 初期ロード時に市区町村を1回だけロード
+  prefGroup.style('opacity', 0.08);
+  muniGroup.style('display', 'block');
+  loadMunicipalities();
+
+  updateZoomUI(1);
+
+  // resizeの際にzoomBehaviorを保持
+  svg.__zoom_behavior = zoomBehavior;
 
   const elapsed = performance.now() - (_debug.startTime || 0);
   _debug.stats.prefCount = features.length;
@@ -1816,14 +1744,13 @@ function openPopup(shortName, fullName){
 
   overlay.style.display = 'block';
   popup.style.display = 'flex';
-  const pb = popup.querySelector('.pb');
-  if (pb) pb.scrollTop = 0;
+  popup.querySelector('.pb').scrollTop = 0;
 }
 
 function closePopup(){
   overlay.style.display = 'none';
   popup.style.display = 'none';
-  if (prefGroup) prefGroup.selectAll('path.pref').classed('active', false);
+  svg.selectAll('path.pref').classed('active', false);
   selected = null;
 }
 
@@ -1844,7 +1771,7 @@ document.querySelectorAll('.leg-item[data-filter]').forEach(el => {
 });
 
 function applyFilter(){
-  if (prefGroup) prefGroup.selectAll('path.pref').style('opacity', d => {
+  svg.selectAll('path.pref').style('opacity', d => {
     if(activeFilter === null) return 1;
     const shortName = PREF_SHORT[d.properties.nam_ja] || d.properties.nam_ja;
     return MAX_RATINGS[shortName] === activeFilter ? 1 : 0.18;
@@ -1869,7 +1796,7 @@ function updatePrefList(){
   if (el) el.innerHTML = html;
 }
 
-// Load map — Leaflet ベースで初期化
+// Load map (fetch area_data.json + pref.topojson in parallel, then render)
 async function initMapOffline() {
   try {
     if (!mapWrap || mapWrap.clientWidth === 0 || mapWrap.clientHeight === 0) {
@@ -1896,136 +1823,25 @@ async function initMapOffline() {
     }
     _debug.log('初期化開始');
 
-    // --- Leaflet 初期化 ---
-    const isMobile = mapWrap.clientWidth < 600;
-    leafletMap = L.map('map', {
-      center: isMobile ? [36.0, 137.0] : [37.0, 137.0],
-      zoom: isMobile ? 5 : 6,
-      zoomControl: false,   // 既存 +/- ボタンを使用
-      attributionControl: true,
-    });
-
-    // 国土地理院 淡色地図
-    L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
-      attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',
-      maxZoom: 18,
-    }).addTo(leafletMap);
-
-    // --- L.svg() レイヤーで D3 SVG を Leaflet に統合 ---
-    // L.svg() は自動でサイズ管理・ペイン配置を行うため確実
-    const svgLayer = L.svg({ padding: 0.1 }).addTo(leafletMap);
-    svgOverlay = d3.select(svgLayer._container);
-    svgOverlay.style('pointer-events', 'none');
-    mainG = d3.select(svgLayer._rootGroup)
-      .style('pointer-events', 'auto')
-      .style('will-change', 'transform');
-
-    mapGroup = mainG;
-
-    // viewreset（ズームレベル変化）時に全パスを再投影
-    leafletMap.on('viewreset zoomend moveend', redrawD3);
-
-    // 都道府県描画 → 完了後に再描画で座標を確定
     renderMap(japan);
-    setTimeout(() => redrawD3(), 50);
-    hideMapError();
+    hideMapError(); // 以前のエラー表示があれば消す
 
-    // ズームUI・ボタン接続
-    document.getElementById('zoom-in-btn').onclick  = () => leafletMap.zoomIn();
-    document.getElementById('zoom-out-btn').onclick = () => leafletMap.zoomOut();
-    document.getElementById('reset-btn').onclick    = () => {
-      leafletMap.setView(isMobile ? [36.0, 137.0] : [37.0, 137.0], isMobile ? 5 : 6);
-    };
-    leafletMap.on('zoom', () => updateZoomUI(leafletMap.getZoom()));
-    updateZoomUI(leafletMap.getZoom());
-
-    // resize 対応
     window.addEventListener('resize', () => {
-      leafletMap.invalidateSize();
-      redrawD3();
-    });
-
-    // 市区町村ロード (常時表示)
-    prefGroup.style('opacity', 0.08);
-    muniGroup.style('display', 'block');
-    loadMunicipalities();
-
-    // zoomend で市区町村ロード（zoom 9未満では描画しないが、ロードは済ませておく）
-    leafletMap.on('zoomend', () => {
-      if (leafletMap.getZoom() >= MUNI_THRESHOLD && !muniFeatures && !muniLoading) {
-        loadMunicipalities();
-      }
-    });
-
-    // ── Leaflet クリックで市区町村・都道府県の詳細を開く ──────────────────
-    // D3のclick がLeafletに横取りされる場合のフォールバック（空間クエリ方式）
-    let _mapDragged = false;
-    leafletMap.on('dragstart', () => { _mapDragged = true; });
-    leafletMap.on('dragend',   () => { setTimeout(() => { _mapDragged = false; }, 200); });
-
-    // windowのキャプチャフェーズでクリックを取得（LeafletのstopPropagationより先）
-    window.addEventListener('click', function(e) {
-      if (_mapDragged) return;
-      const mapEl = document.getElementById('map');
-      if (!mapEl || !mapEl.contains(e.target)) return;
-      if (e.target.closest('#left-sidebar, #right-sidebar, #app-header, #legend-panel, .leaflet-control')) return;
-      if (!muniFeatures || !prefFeatures) return;
-      const rect = mapEl.getBoundingClientRect();
-      const containerPt = L.point(e.clientX - rect.left, e.clientY - rect.top);
-      const latlng = leafletMap.containerPointToLatLng(containerPt);
-      const clickPt = [latlng.lng, latlng.lat];
-      tip.style.display = 'none';
-
-      // 市区町村を優先検索
-      if (muniFeatures && muniFeatures.length) {
-        for (const f of muniFeatures) {
-          if (d3.geoContains(f, clickPt)) {
-            const jaName = f._jaName || EN_TO_JA[f._name] || f._name;
-            let prefName = '';
-            for (const pref of prefFeatures) {
-              if (d3.geoContains(pref, clickPt)) {
-                prefName = pref.properties.nam_ja || '';
-                break;
-              }
-            }
-            muniGroup.selectAll('path.muni').classed('selected-muni', false);
-            // 該当パスをハイライト
-            muniGroup.selectAll('path.muni').filter(d => d === f).classed('selected-muni', true);
-            openCityPanel(jaName, prefName, _cityLookup[jaName] || f._details || null);
-            return;
-          }
+      const oldTransform = currentTransform;
+      try {
+        renderMap(japan);
+        if (oldTransform !== d3.zoomIdentity) {
+          const zb = svg.node().__zoom_behavior;
+          if (zb) svg.call(zb.transform, oldTransform);
         }
+      } catch(resizeErr) {
+        console.error('[resize] renderMap失敗:', resizeErr.message);
+        if (window.DEBUG) console.error('[DEBUG]', resizeErr);
+        showMapError('地図の再描画に失敗しました');
       }
-
-      // 市区町村未ロードまたは未ヒット → 都道府県で検索
-      for (const pref of prefFeatures) {
-        if (d3.geoContains(pref, clickPt)) {
-          const shortName = PREF_SHORT[pref.properties.nam_ja] || pref.properties.nam_ja;
-          if (AREA_DATA[shortName]) {
-            openPopup(shortName, pref.properties.nam_ja);
-            prefGroup.selectAll('path.pref').classed('active', false);
-            prefGroup.selectAll('path.pref').filter(d => d === pref).classed('active', true);
-          }
-          return;
-        }
-      }
-    }, true); // キャプチャフェーズ: LeafletのstopPropagationより先に実行
-    // ────────────────────────────────────────────────────────────────────────
-
-    // ハザードマップコントロールのイベント設定
-    document.querySelectorAll('#hazard-controls input[data-key]').forEach(cb => {
-      cb.addEventListener('change', e => toggleHazardLayer(e.target.dataset.key, e.target.checked));
     });
-    const opacitySlider = document.getElementById('hazard-opacity');
-    const opacityVal    = document.getElementById('hazard-opacity-val');
-    if (opacitySlider) {
-      opacitySlider.addEventListener('input', e => {
-        setHazardOpacity(parseFloat(e.target.value));
-        if (opacityVal) opacityVal.textContent = Math.round(e.target.value * 100) + '%';
-      });
-    }
 
-    _debug.log('Leaflet + D3 初期化完了');
+    _debug.log('初期化完了');
   } catch(err) {
     console.error('[init] 初期化失敗:', err.message);
     if (window.DEBUG) console.error('[DEBUG] エラー詳細:', err);
@@ -2322,16 +2138,24 @@ function closeCityPanel() {
   const content = document.getElementById('panel-content');
   if (sidebar) sidebar.classList.remove('panel-open');
   if (content) content.style.display = 'none';
-  if (muniGroup) muniGroup.selectAll('path.muni').classed('selected-muni', false);
-  if (prefGroup) prefGroup.selectAll('path.pref').classed('active', false);
+  svg.selectAll('path.muni').classed('selected-muni', false);
+  svg.selectAll('path.pref').classed('active', false);
   selected = null;
 }
 
 function zoomToCity(lat, lng) {
-  if (!leafletMap) return;
-  const isMobile = mapWrap.clientWidth < 600;
-  const offset = isMobile ? 0.5 : 0;
-  leafletMap.flyTo([lat + offset, lng], 12, { duration: 0.8 });
+  if (!projFn || !svg.__zoom_behavior) return;
+  const [sx, sy] = projFn([lng, lat]);
+  const w = getW(), h = getH();
+  const scale = 10;
+  // モバイルは下パネル(48vh)が地図に重なるため、
+  // 見える範囲の中央(上から約22%)に市区町村を配置する
+  const isMobile = w < 600;
+  const yCenter = isMobile ? h * 0.14 : h * 0.50;
+  const tx = w / 2 - scale * sx;
+  const ty = yCenter - scale * sy;
+  const transform = d3.zoomIdentity.translate(tx, ty).scale(scale);
+  svg.transition().duration(800).call(svg.__zoom_behavior.transform, transform);
 }
 
 // Override openPopup to use new right panel (for prefecture clicks)
@@ -2428,25 +2252,36 @@ document.addEventListener('click', (e) => {
 });
 
 // Zoom in/out buttons
-// Prefecture border toggle
+document.getElementById('zoom-in-btn').addEventListener('click', () => {
+  if (svg.__zoom_behavior) svg.transition().duration(300).call(svg.__zoom_behavior.scaleBy, 1.5);
+});
+document.getElementById('zoom-out-btn').addEventListener('click', () => {
+  if (!svg.__zoom_behavior) return;
+  const k = currentTransform.k;
+  if (k <= 1) return; // 100%以下にはしない
+  svg.transition().duration(300).call(svg.__zoom_behavior.scaleBy, 0.67);
+});
+
+// Prefecture border toggle (Disabled as it is no longer needed with always-on municipality display)
 const prefToggle = document.getElementById('pref-border-toggle');
 let showPrefBorders = true;
 if (prefToggle) {
   prefToggle.addEventListener('click', () => {
     showPrefBorders = !showPrefBorders;
-    if (prefGroup) prefGroup.style('display', showPrefBorders ? '' : 'none');
+    const prefGroupEl = document.getElementById('pref-group');
+    if (prefGroupEl) {
+      prefGroupEl.style.display = showPrefBorders ? '' : 'none';
+    }
     prefToggle.classList.toggle('active', showPrefBorders);
     prefToggle.textContent = showPrefBorders ? '都道府県境界を表示' : '都道府県境界を非表示';
   });
 }
 
-// updateZoomUI は zoom-ratio-text も更新（Leaflet zoom level を ×倍換算で表示）
+// Override updateZoomUI to update new elements
 const _origUpdateZoomUI = updateZoomUI;
-updateZoomUI = function(z) {
-  _origUpdateZoomUI(z);
+updateZoomUI = function(k) {
   const zoomText = document.getElementById('zoom-ratio-text');
-  // zoom 6 = 1x として換算表示
-  if (zoomText) zoomText.textContent = 'zoom ' + z;
+  if (zoomText) zoomText.textContent = Math.round(k * 100) + '%';
   const zoomInfo = document.getElementById('zoom-info');
   if (zoomInfo) {
     zoomInfo.textContent = '全国の市区町村を常に色分け表示中';
