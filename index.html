@@ -79,7 +79,18 @@ body {
     --accent-blue:   #007aff;
     --danger:        #ff3b30;
     --shadow: rgba(0,0,0,0.15);
+    --map-bg: #e8e8ed;    /* ライトモードの地図背景 */
   }
+  /* ライトモード: 地図背景 */
+  #map-wrap { background: #e8e8ed !important; }
+  /* ライトモード: 凡例パネル */
+  #legend-panel {
+    background: rgba(255,255,255,0.90) !important;
+    border-color: rgba(0,0,0,0.10) !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
+  }
+  #legend-title { color: var(--text-dim) !important; }
+  .leg-label { color: var(--text-primary) !important; }
 }
 
 /* ========== HEADER ========== */
