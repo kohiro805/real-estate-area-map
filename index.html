@@ -1861,7 +1861,9 @@ if (document.readyState === 'complete') {
 // ==========================================
 
 function calcScore(rating) {
-  return Math.min(100, rating * 18 + 10);
+  // 新閾値（80/60/40/28）の各レンジ中央値
+  const mid = {5: 90, 4: 70, 3: 50, 2: 34, 1: 18};
+  return mid[rating] || 0;
 }
 
 function getRankInfo(rating) {
