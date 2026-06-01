@@ -309,6 +309,55 @@ body {
   <div id="map-wrap">
     <div id="map"></div>
 
+    <!-- 土砂災害凡例（右下）-->
+    <div id="landslide-legend" style="display:none;position:absolute;bottom:16px;right:16px;background:rgba(15,23,42,0.90);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 12px;backdrop-filter:blur(8px);z-index:500;min-width:175px;">
+      <div style="font-size:0.6rem;font-weight:700;color:#94a3b8;letter-spacing:0.08em;margin-bottom:8px;">⛰ 土砂災害警戒区域</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <!-- 急傾斜地の崩壊 -->
+        <div>
+          <div style="font-size:0.68rem;color:#f1f5f9;font-weight:600;margin-bottom:3px;">急傾斜地の崩壊</div>
+          <div style="display:flex;gap:6px;">
+            <div style="display:flex;align-items:center;gap:5px;">
+              <div style="width:14px;height:14px;border-radius:2px;background:#FFE100;flex-shrink:0;"></div>
+              <span style="font-size:0.65rem;color:#94a3b8;">警戒区域</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;">
+              <div style="width:14px;height:14px;border-radius:2px;background:#FF0000;flex-shrink:0;"></div>
+              <span style="font-size:0.65rem;color:#94a3b8;">特別警戒区域</span>
+            </div>
+          </div>
+        </div>
+        <!-- 土石流 -->
+        <div>
+          <div style="font-size:0.68rem;color:#f1f5f9;font-weight:600;margin-bottom:3px;">土石流</div>
+          <div style="display:flex;gap:6px;">
+            <div style="display:flex;align-items:center;gap:5px;">
+              <div style="width:14px;height:14px;border-radius:2px;background:#FFE100;flex-shrink:0;"></div>
+              <span style="font-size:0.65rem;color:#94a3b8;">警戒区域</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;">
+              <div style="width:14px;height:14px;border-radius:2px;background:#FF0000;flex-shrink:0;"></div>
+              <span style="font-size:0.65rem;color:#94a3b8;">特別警戒区域</span>
+            </div>
+          </div>
+        </div>
+        <!-- 地すべり -->
+        <div>
+          <div style="font-size:0.68rem;color:#f1f5f9;font-weight:600;margin-bottom:3px;">地すべり</div>
+          <div style="display:flex;gap:6px;">
+            <div style="display:flex;align-items:center;gap:5px;">
+              <div style="width:14px;height:14px;border-radius:2px;background:#FFE100;flex-shrink:0;"></div>
+              <span style="font-size:0.65rem;color:#94a3b8;">警戒区域</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;">
+              <div style="width:14px;height:14px;border-radius:2px;background:#FF0000;flex-shrink:0;"></div>
+              <span style="font-size:0.65rem;color:#94a3b8;">特別警戒区域</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 洪水浸水深さ凡例（右下）-->
     <div id="flood-legend" style="display:none;position:absolute;bottom:16px;right:16px;background:rgba(15,23,42,0.90);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 12px;backdrop-filter:blur(8px);z-index:500;min-width:160px;">
       <div style="font-size:0.6rem;font-weight:700;color:#94a3b8;letter-spacing:0.08em;margin-bottom:8px;">🌊 洪水浸水深さ</div>
@@ -346,7 +395,15 @@ body {
 <script>
 const HAZARD_LAYERS = {
   flood:     { url: 'https://disaportaldata.gsi.go.jp/raster/01_flood_l2_shinsuishin_data/{z}/{x}/{y}.png',   layer: null },
-  landslide: { url: 'https://disaportaldata.gsi.go.jp/raster/05_dosekiryukeikaikuiki/{z}/{x}/{y}.png',         layer: null },
+  // 土砂災害は3種類（急傾斜地・土石流・地すべり）を同時表示
+  landslide: {
+    urls: [
+      'https://disaportaldata.gsi.go.jp/raster/05_kyukeishakeikaikuiki/{z}/{x}/{y}.png',   // 急傾斜地の崩壊
+      'https://disaportaldata.gsi.go.jp/raster/05_dosekiryukeikaikuiki/{z}/{x}/{y}.png',   // 土石流
+      'https://disaportaldata.gsi.go.jp/raster/05_jisuberikeikaikuiki/{z}/{x}/{y}.png',    // 地すべり
+    ],
+    layers: []
+  },
   storm:     { url: 'https://disaportaldata.gsi.go.jp/raster/03_hightide_l2_shinsuishin_data/{z}/{x}/{y}.png', layer: null },
   tsunami:   { url: 'https://disaportaldata.gsi.go.jp/raster/04_tsunami_newlegend_data/{z}/{x}/{y}.png',       layer: null },
 };
@@ -393,14 +450,27 @@ document.getElementById('reset-btn').onclick = () => {
 function toggleHazard(key, enabled) {
   const h = HAZARD_LAYERS[key];
   const item = document.getElementById(`item-${key}`);
+  const attr = '<a href="https://disaportal.gsi.go.jp/">国土交通省ハザードマップポータル</a>';
+
+  // 土砂災害は複数タイル対応
+  if (h.urls) {
+    if (enabled) {
+      if (!h.layers.length) {
+        h.layers = h.urls.map(url => L.tileLayer(url, { opacity: hazardOpacity, maxZoom: 18, pane: 'hazardPane', attribution: attr }));
+      }
+      h.layers.forEach(l => l.addTo(leafletMap));
+      item?.classList.add('active');
+    } else {
+      h.layers.forEach(l => leafletMap.removeLayer(l));
+      item?.classList.remove('active');
+    }
+    return;
+  }
+
+  // 通常（単一タイル）
   if (enabled) {
     if (!h.layer) {
-      h.layer = L.tileLayer(h.url, {
-        opacity: hazardOpacity,
-        maxZoom: 18,
-        pane: 'hazardPane',
-        attribution: '<a href="https://disaportal.gsi.go.jp/">国土交通省ハザードマップポータル</a>',
-      });
+      h.layer = L.tileLayer(h.url, { opacity: hazardOpacity, maxZoom: 18, pane: 'hazardPane', attribution: attr });
     }
     h.layer.addTo(leafletMap);
     item?.classList.add('active');
@@ -423,13 +493,23 @@ slider.addEventListener('input', e => {
   opVal.textContent = Math.round(hazardOpacity * 100) + '%';
   Object.values(HAZARD_LAYERS).forEach(h => {
     if (h.layer && leafletMap.hasLayer(h.layer)) h.layer.setOpacity(hazardOpacity);
+    if (h.layers) h.layers.forEach(l => { if (leafletMap.hasLayer(l)) l.setOpacity(hazardOpacity); });
   });
 });
 
-// 洪水凡例の表示制御
+// 凡例の表示制御
 function updateFloodLegend() {
-  const visible = document.getElementById('cb-flood').checked;
-  document.getElementById('flood-legend').style.display = visible ? 'block' : 'none';
+  const floodOn = document.getElementById('cb-flood').checked;
+  const landOn  = document.getElementById('cb-landslide').checked;
+  // 両方ONの場合は洪水を右下、土砂を少し上に
+  document.getElementById('flood-legend').style.display = floodOn ? 'block' : 'none';
+  document.getElementById('landslide-legend').style.display = landOn ? 'block' : 'none';
+  // 両方表示の場合は土砂を上にずらす
+  if (floodOn && landOn) {
+    document.getElementById('landslide-legend').style.bottom = (16 + document.getElementById('flood-legend').offsetHeight + 8) + 'px';
+  } else {
+    document.getElementById('landslide-legend').style.bottom = '16px';
+  }
 }
 
 // デフォルトで洪水レイヤーをON
@@ -439,6 +519,7 @@ updateFloodLegend();
 
 // チェック変更時に凡例も連動
 document.getElementById('cb-flood').addEventListener('change', updateFloodLegend);
+document.getElementById('cb-landslide').addEventListener('change', updateFloodLegend);
 
 // ──── 地区検索（国土地理院 アドレス検索API）────────────────────────────
 const searchInput = document.getElementById('search-input');
