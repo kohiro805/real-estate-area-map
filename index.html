@@ -2537,9 +2537,10 @@ function zoomToCity(lat, lng) {
   const w = getW(), h = getH();
   const scale = 10;
   // モバイルは下パネル(48vh)が地図に重なるため、
-  // 見える範囲の中央(上から約22%)に市区町村を配置する
+  // 検索エリア下端〜パネル上端の中央に市区町村を配置
+  // panel top ≈ h*0.47, center = h*0.47/2 ≈ h*0.24
   const isMobile = w < 600;
-  const yCenter = isMobile ? h * 0.14 : h * 0.50;
+  const yCenter = isMobile ? h * 0.24 : h * 0.50;
   const tx = w / 2 - scale * sx;
   const ty = yCenter - scale * sy;
   const transform = d3.zoomIdentity.translate(tx, ty).scale(scale);
