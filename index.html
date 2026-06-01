@@ -91,6 +91,31 @@ body {
   }
   #legend-title { color: var(--text-dim) !important; }
   .leg-label { color: var(--text-primary) !important; }
+
+  /* ライトモード: 右パネル */
+  #right-sidebar {
+    background: rgba(255,255,255,0.92) !important;
+    border-left-color: rgba(0,0,0,0.10) !important;
+  }
+  #panel-header { border-bottom-color: rgba(0,0,0,0.08) !important; }
+  .panel-card {
+    background: rgba(0,0,0,0.03) !important;
+    border-color: rgba(0,0,0,0.08) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+  }
+  /* スクロールバーをライトモードに */
+  #panel-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15) !important; }
+  /* ランクバッジをライトモードで視認しやすい色に */
+  .rank-ss { background: rgba(10,132,255,0.12) !important;  color: #006cc1 !important; border-color: rgba(10,132,255,0.25) !important; }
+  .rank-a  { background: rgba(48,215,75,0.12) !important;   color: #1a8c36 !important; border-color: rgba(48,215,75,0.25) !important; }
+  .rank-b  { background: rgba(255,149,0,0.12) !important;   color: #b35a00 !important; border-color: rgba(255,149,0,0.25) !important; }
+  .rank-c  { background: rgba(255,100,0,0.12) !important;   color: #b03800 !important; border-color: rgba(255,100,0,0.25) !important; }
+  .rank-d  { background: rgba(255,69,58,0.12) !important;   color: #b01a12 !important; border-color: rgba(255,69,58,0.25) !important; }
+  /* モバイル: 下部ドロワーも同様 */
+  #right-sidebar.panel-open {
+    background: rgba(255,255,255,0.95) !important;
+    border-top-color: rgba(0,0,0,0.10) !important;
+  }
 }
 
 /* ========== HEADER ========== */
@@ -590,7 +615,7 @@ text.pref-label {
   justify-content: space-between;
   align-items: center;
   padding: 7px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid var(--border-sub);
   font-size: 0.75rem;
   line-height: 1.4;
   gap: 8px;
@@ -608,7 +633,7 @@ text.pref-label {
 }
 /* 数値データ専用（右揃え、強調） */
 .data-val-num {
-  color: #f1f5f9;
+  color: var(--text-primary);
   font-size: 0.88rem;
   font-weight: 600;
   text-align: right;
@@ -620,9 +645,9 @@ text.pref-label {
   margin-left: 3px;
   font-weight: 400;
 }
-.data-badge-up   { color: #10b981; font-weight: 700; font-size: 0.8rem; }
-.data-badge-down { color: #f87171; font-weight: 700; font-size: 0.8rem; }
-.data-badge-flat { color: #94a3b8; font-weight: 700; font-size: 0.8rem; }
+.data-badge-up   { color: var(--success); font-weight: 700; font-size: 0.8rem; }
+.data-badge-down { color: var(--danger);  font-weight: 700; font-size: 0.8rem; }
+.data-badge-flat { color: var(--text-dim); font-weight: 700; font-size: 0.8rem; }
 
 /* Strengths / Risks */
 .eval-list {
