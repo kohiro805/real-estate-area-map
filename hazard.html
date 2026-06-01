@@ -327,7 +327,7 @@ let hazardOpacity = 0.7;
 const isMobile = window.innerWidth < 768;
 const leafletMap = L.map('map', {
   center: isMobile ? [35.0, 137.0] : [37.5, 140.5],
-  zoom: isMobile ? 5 : 6,
+  zoom: 5,
   zoomControl: false,
 });
 
@@ -353,7 +353,7 @@ document.getElementById('zoom-out-btn').onclick = () => leafletMap.zoomOut();
 document.getElementById('reset-btn').onclick = () => {
   leafletMap.setView(
     isMobile ? [35.0, 137.0] : [37.5, 140.5],
-    isMobile ? 5 : 6,
+    5,
     { animate: false }
   );
 };
