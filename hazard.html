@@ -308,6 +308,37 @@ body {
   <!-- 地図エリア -->
   <div id="map-wrap">
     <div id="map"></div>
+
+    <!-- 洪水浸水深さ凡例（右下）-->
+    <div id="flood-legend" style="display:none;position:absolute;bottom:16px;right:16px;background:rgba(15,23,42,0.90);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 12px;backdrop-filter:blur(8px);z-index:500;min-width:160px;">
+      <div style="font-size:0.6rem;font-weight:700;color:#94a3b8;letter-spacing:0.08em;margin-bottom:8px;">🌊 洪水浸水深さ</div>
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <div style="display:flex;align-items:center;gap:7px;">
+          <div style="width:18px;height:14px;border-radius:2px;background:#8B1A8B;flex-shrink:0;"></div>
+          <span style="font-size:0.72rem;color:#f1f5f9;">20m〜</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;">
+          <div style="width:18px;height:14px;border-radius:2px;background:#C44040;flex-shrink:0;"></div>
+          <span style="font-size:0.72rem;color:#f1f5f9;">10〜20m</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;">
+          <div style="width:18px;height:14px;border-radius:2px;background:#F57575;flex-shrink:0;"></div>
+          <span style="font-size:0.72rem;color:#f1f5f9;">5.0〜10m <span style="font-size:0.6rem;color:#94a3b8;">2階屋根以上</span></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;">
+          <div style="width:18px;height:14px;border-radius:2px;background:#FFB5A0;flex-shrink:0;"></div>
+          <span style="font-size:0.72rem;color:#f1f5f9;">3.0〜5.0m <span style="font-size:0.6rem;color:#94a3b8;">2階部分まで</span></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;">
+          <div style="width:18px;height:14px;border-radius:2px;background:#FFE0B4;flex-shrink:0;"></div>
+          <span style="font-size:0.72rem;color:#f1f5f9;">0.5〜3.0m <span style="font-size:0.6rem;color:#94a3b8;">1階天井まで</span></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;">
+          <div style="width:18px;height:14px;border-radius:2px;background:#F9F4C5;flex-shrink:0;border:1px solid rgba(255,255,255,0.2);"></div>
+          <span style="font-size:0.72rem;color:#f1f5f9;">0.0〜0.5m <span style="font-size:0.6rem;color:#94a3b8;">大人の膝まで</span></span>
+        </div>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -395,9 +426,19 @@ slider.addEventListener('input', e => {
   });
 });
 
+// 洪水凡例の表示制御
+function updateFloodLegend() {
+  const visible = document.getElementById('cb-flood').checked;
+  document.getElementById('flood-legend').style.display = visible ? 'block' : 'none';
+}
+
 // デフォルトで洪水レイヤーをON
 document.getElementById('cb-flood').checked = true;
 toggleHazard('flood', true);
+updateFloodLegend();
+
+// チェック変更時に凡例も連動
+document.getElementById('cb-flood').addEventListener('change', updateFloodLegend);
 
 // ──── 地区検索（国土地理院 アドレス検索API）────────────────────────────
 const searchInput = document.getElementById('search-input');
