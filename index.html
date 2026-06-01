@@ -244,6 +244,7 @@ body {
   shape-rendering: optimizeSpeed;
   vector-effect: non-scaling-stroke;
   cursor: pointer;
+  pointer-events: all;
 }
 .leaflet-overlay-pane path.pref {
   stroke: rgba(255,255,255,0.25);
@@ -1945,6 +1946,61 @@ async function initMapOffline() {
         loadMunicipalities();
       }
     });
+
+    // ── Leaflet クリックで市区町村・都道府県の詳細を開く ──────────────────
+    // D3のclick がLeafletに横取りされる場合のフォールバック（空間クエリ方式）
+    let _mapDragged = false;
+    leafletMap.on('dragstart', () => { _mapDragged = true; });
+    leafletMap.on('dragend',   () => { setTimeout(() => { _mapDragged = false; }, 200); });
+
+    // windowのキャプチャフェーズでクリックを取得（LeafletのstopPropagationより先）
+    window.addEventListener('click', function(e) {
+      if (_mapDragged) return;
+      const mapEl = document.getElementById('map');
+      if (!mapEl || !mapEl.contains(e.target)) return;
+      if (e.target.closest('#left-sidebar, #right-sidebar, #app-header, #legend-panel, .leaflet-control')) return;
+      if (!muniFeatures || !prefFeatures) return;
+      const rect = mapEl.getBoundingClientRect();
+      const containerPt = L.point(e.clientX - rect.left, e.clientY - rect.top);
+      const latlng = leafletMap.containerPointToLatLng(containerPt);
+      const clickPt = [latlng.lng, latlng.lat];
+      tip.style.display = 'none';
+
+      // 市区町村を優先検索
+      if (muniFeatures && muniFeatures.length) {
+        for (const f of muniFeatures) {
+          if (d3.geoContains(f, clickPt)) {
+            const jaName = f._jaName || EN_TO_JA[f._name] || f._name;
+            let prefName = '';
+            for (const pref of prefFeatures) {
+              if (d3.geoContains(pref, clickPt)) {
+                prefName = pref.properties.nam_ja || '';
+                break;
+              }
+            }
+            muniGroup.selectAll('path.muni').classed('selected-muni', false);
+            // 該当パスをハイライト
+            muniGroup.selectAll('path.muni').filter(d => d === f).classed('selected-muni', true);
+            openCityPanel(jaName, prefName, _cityLookup[jaName] || f._details || null);
+            return;
+          }
+        }
+      }
+
+      // 市区町村未ロードまたは未ヒット → 都道府県で検索
+      for (const pref of prefFeatures) {
+        if (d3.geoContains(pref, clickPt)) {
+          const shortName = PREF_SHORT[pref.properties.nam_ja] || pref.properties.nam_ja;
+          if (AREA_DATA[shortName]) {
+            openPopup(shortName, pref.properties.nam_ja);
+            prefGroup.selectAll('path.pref').classed('active', false);
+            prefGroup.selectAll('path.pref').filter(d => d === pref).classed('active', true);
+          }
+          return;
+        }
+      }
+    }, true); // キャプチャフェーズ: LeafletのstopPropagationより先に実行
+    // ────────────────────────────────────────────────────────────────────────
 
     // ハザードマップコントロールのイベント設定
     document.querySelectorAll('#hazard-controls input[data-key]').forEach(cb => {
