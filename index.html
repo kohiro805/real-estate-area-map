@@ -83,6 +83,19 @@ body {
   }
   /* ライトモード: 地図背景 */
   #map-wrap { background: #e8e8ed !important; }
+
+  /* ライトモード: 検索欄 */
+  #search-input {
+    border-bottom-color: rgba(0,0,0,0.35) !important;
+    color: var(--text-primary) !important;
+  }
+  #search-input:focus {
+    border-bottom-color: var(--accent-blue) !important;
+  }
+  #search-input::placeholder {
+    color: var(--text-dim) !important;
+  }
+  .sidebar-section-title { color: var(--text-secondary) !important; }
   /* ライトモード: 凡例パネル */
   #legend-panel {
     background: rgba(255,255,255,0.90) !important;
