@@ -1049,6 +1049,44 @@ text.pref-label {
   /* フローティングウィンドウ */
   #tip { max-width: 88vw; font-size: 0.68rem; }
 
+  /* ─── エリア検索カードスタイル ─── */
+  /* サイドバー全体をカード化 */
+  #left-sidebar {
+    background: var(--bg-panel) !important;
+    padding: 12px 16px !important;
+    gap: 0 !important;
+  }
+  /* 検索セクションをカード風に */
+  .sidebar-section:first-child {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 14px !important;
+  }
+  /* セクションタイトル: 参考アプリ準拠 */
+  .sidebar-section-title {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    margin-bottom: 10px !important;
+  }
+  /* 検索入力: 参考アプリのように角丸・ガラス感 */
+  #search-input {
+    background: rgba(255,255,255,0.06) !important;
+    border: 1px solid var(--border-input) !important;
+    border-radius: 12px !important;
+    padding: 12px 16px !important;
+    font-size: 16px !important;
+    font-weight: 400 !important;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.12) !important;
+  }
+  #search-input::placeholder {
+    color: var(--text-dim) !important;
+    font-size: 15px !important;
+  }
+
   /* ─── モバイルヘッダー: タイトル中央・大きく ─── */
   #app-header {
     justify-content: center;
