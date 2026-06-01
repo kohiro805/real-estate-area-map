@@ -1450,8 +1450,8 @@ function renderAllMuni() {
       if (info?.households     != null) rows.push(['世帯数', info.households.toLocaleString() + ' 世帯']);
       if (info?.population_density != null) rows.push(['人口密度', Math.round(info.population_density).toLocaleString() + ' 人/km²']);
       if (info?.rental_housing_num != null) rows.push(['借家数', info.rental_housing_num.toLocaleString() + ' 戸']);
-      if (info?.vacant_housing_num != null) rows.push(['借家の空室数', info.vacant_housing_num.toLocaleString() + ' 戸']);
-      if (info?.vacant_rate != null) rows.push(['借家の空室率', (info.vacant_rate * 100).toFixed(2) + ' %']);
+      if (info?.vacant_housing_num != null && info.vacant_housing_num > 0) rows.push(['借家の空室数', info.vacant_housing_num.toLocaleString() + ' 戸']);
+      if (info?.vacant_rate != null && info.vacant_rate > 0) rows.push(['借家の空室率', (info.vacant_rate * 100).toFixed(2) + ' %']);
 
       const rowsHtml = rows.map(([label, val]) => `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:0.72rem;">
@@ -2066,12 +2066,12 @@ function openCityPanel(cityName, prefName, areaData) {
         <span class="data-label">借家数<span style="font-size:0.6rem;color:#64748b;margin-left:4px;">2023年</span></span>
         <span class="data-val-num">${areaData.rental_housing_num.toLocaleString()}<span class="data-unit">戸</span></span>
       </div>` : ''}
-      ${areaData.vacant_housing_num != null ? `
+      ${(areaData.vacant_housing_num != null && areaData.vacant_housing_num > 0) ? `
       <div class="data-row">
         <span class="data-label">借家の空室数<span style="font-size:0.6rem;color:#64748b;margin-left:4px;">2023年</span></span>
         <span class="data-val-num">${areaData.vacant_housing_num.toLocaleString()}<span class="data-unit">戸</span></span>
       </div>` : ''}
-      ${areaData.vacant_rate != null ? `
+      ${(areaData.vacant_rate != null && areaData.vacant_rate > 0) ? `
       <div class="data-row">
         <span class="data-label">借家の空室率<span style="font-size:0.6rem;color:#64748b;margin-left:4px;">2023年</span></span>
         <span class="data-val-num">${(areaData.vacant_rate * 100).toFixed(2)}<span class="data-unit">%</span></span>
