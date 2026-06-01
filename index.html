@@ -1151,6 +1151,16 @@ text.pref-label {
   #header-logo { font-size: 1.05rem; }
   #right-sidebar { height: 52vh; }
 }
+
+/* ライトモード × スマホ: 検索欄の下線を上書き（最後に記述して優先度確保） */
+@media (prefers-color-scheme: light) and (max-width: 768px) {
+  #search-input {
+    border-bottom: 1.5px solid #8e8e93 !important;
+    color: #1c1c1e !important;
+  }
+  #search-input::placeholder { color: #8e8e93 !important; }
+  .sidebar-section-title { color: #636366 !important; }
+}
 </style>
 </head>
 <body>
