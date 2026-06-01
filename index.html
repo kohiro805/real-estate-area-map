@@ -1182,8 +1182,8 @@ async function loadMunicipalities() {
 
     // 外部スクリプトから並列ロード（file://・GitHub Pages両対応）
     await Promise.all([
-      _loadScript('muni_topo.js'),
-      _loadScript('centroid.js')
+      _loadScript('muni_topo.js?v=20250601'),
+      _loadScript('centroid.js?v=20250601')
     ]);
     muniTopoData = window.JAPAN_MUNI_TOPOJSON;
 
@@ -1808,8 +1808,8 @@ async function initMapOffline() {
     if (badge) { badge.textContent = '⏳ データ読み込み中...'; badge.style.display = 'block'; }
 
     await Promise.all([
-      _loadScript('area_data.js'),
-      _loadScript('pref_topo.js')
+      _loadScript('area_data.js?v=20250601'),
+      _loadScript('pref_topo.js?v=20250601')
     ]);
 
     AREA_DATA = window.AREA_DATA;
