@@ -324,10 +324,16 @@ let hazardOpacity = 0.7;
 // Leaflet マップ初期化
 const isMobile = window.innerWidth < 768;
 const leafletMap = L.map('map', {
-  center: isMobile ? [36.0, 137.0] : [37.0, 137.0],
-  zoom: isMobile ? 5 : 6,
+  center: [37.0, 137.0],
+  zoom: 5,
   zoomControl: false,
 });
+// 日本全体（北海道〜沖縄）が収まるようfitBounds
+leafletMap.fitBounds(
+  isMobile ? [[26.0, 130.0], [46.0, 146.0]]   // モバイル
+           : [[30.0, 129.5], [46.0, 146.0]],   // PC
+  { padding: [15, 15] }
+);
 
 // 国土地理院 淡色地図
 L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
@@ -348,8 +354,12 @@ leafletMap.on('zoom', () => {
 // ボタン接続
 document.getElementById('zoom-in-btn').onclick  = () => leafletMap.zoomIn();
 document.getElementById('zoom-out-btn').onclick = () => leafletMap.zoomOut();
-document.getElementById('reset-btn').onclick    = () => {
-  leafletMap.setView(isMobile ? [36.0, 137.0] : [37.0, 137.0], isMobile ? 5 : 6);
+document.getElementById('reset-btn').onclick = () => {
+  leafletMap.fitBounds(
+    isMobile ? [[26.0, 130.0], [46.0, 146.0]]
+             : [[30.0, 129.5], [46.0, 146.0]],
+    { padding: [15, 15] }
+  );
 };
 
 // ハザードレイヤー切り替え
