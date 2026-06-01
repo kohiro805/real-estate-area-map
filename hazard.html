@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚠️ ハザードマップ | 不動産エリア特性マップ</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e2d45;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border: rgba(255,255,255,0.08);
+  --accent-blue: #3b82f6;
+}
+body {
+  font-family: 'Hiragino Kaku Gothic Pro','Yu Gothic',Meiryo,sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ヘッダー */
+#app-header {
+  height: 56px;
+  background: rgba(15,23,42,0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  flex-shrink: 0;
+  z-index: 1000;
+}
+#header-left { display: flex; align-items: center; gap: 12px; }
+#header-logo { font-size: 1.1rem; font-weight: 700; color: var(--text-primary); }
+#header-sub { font-size: 0.65rem; color: var(--text-secondary); letter-spacing: 0.08em; }
+#header-right { display: flex; gap: 8px; }
+
+/* タブ */
+.tab-btn {
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid var(--border);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.tab-btn.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+.tab-btn:not(.active) { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+.tab-btn:not(.active):hover { background: rgba(255,255,255,0.12); color: var(--text-primary); }
+
+/* メインエリア */
+#main-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 左サイドバー */
+#left-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 16px;
+  gap: 20px;
+}
+.section-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+/* ハザードレイヤーコントロール */
+.hazard-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border: 1px solid transparent;
+}
+.hazard-item:hover { background: rgba(255,255,255,0.05); }
+.hazard-item.active { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.3); }
+.hazard-item input[type="checkbox"] {
+  width: 16px; height: 16px;
+  accent-color: var(--accent-blue);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.hazard-item label {
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hazard-item label span { font-size: 0.65rem; color: var(--text-secondary); }
+.hazard-dot {
+  width: 12px; height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* 透過率スライダー */
+.opacity-section { display: flex; flex-direction: column; gap: 8px; }
+.opacity-row { display: flex; align-items: center; gap: 8px; }
+.opacity-row input[type="range"] { flex: 1; accent-color: var(--accent-blue); }
+.opacity-val { font-size: 0.72rem; color: var(--text-secondary); width: 36px; text-align: right; }
+
+/* ズームコントロール */
+.zoom-section { display: flex; flex-direction: column; gap: 6px; }
+.ctrl-btn {
+  padding: 7px 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: center;
+}
+.ctrl-btn:hover { background: rgba(255,255,255,0.12); }
+.zoom-btns { display: flex; gap: 6px; }
+.zoom-btns .ctrl-btn { flex: 1; font-size: 1rem; font-weight: 700; }
+#zoom-display { font-size: 0.72rem; color: var(--text-secondary); text-align: center; margin-top: 2px; }
+
+/* 凡例 */
+.legend-section { display: flex; flex-direction: column; gap: 6px; }
+.legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--text-secondary); }
+.legend-color { width: 20px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+/* 注意書き */
+.notice {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  padding: 8px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+/* 地図 */
+#map-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+}
+#map { width: 100%; height: 100%; }
+
+/* Leaflet attribution */
+.leaflet-control-attribution {
+  background: rgba(15,23,42,0.75) !important;
+  color: #64748b !important;
+  font-size: 0.55rem !important;
+}
+.leaflet-control-attribution a { color: #94a3b8 !important; }
+
+/* スマホ対応 */
+@media (max-width: 768px) {
+  #app-header { height: 44px; padding: 0 12px; }
+  #header-logo { font-size: 0.85rem; }
+  #header-sub { display: none; }
+  .tab-btn { padding: 4px 10px; font-size: 0.68rem; }
+  #main-layout { flex-direction: column; }
+  #left-sidebar {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px 12px;
+    gap: 12px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-title { display: none; }
+  .hazard-controls { display: flex; flex-direction: row; gap: 6px; align-items: center; }
+  .hazard-item { padding: 5px 8px; flex-shrink: 0; }
+  .hazard-item label span { display: none; }
+  .opacity-section, .zoom-section, .legend-section, .notice { display: none; }
+}
+</style>
+</head>
+<body>
+
+<header id="app-header">
+  <div id="header-left">
+    <div id="header-logo">🗾 不動産エリア特性マップ</div>
+    <div id="header-sub">HAZARD MAP</div>
+  </div>
+  <div id="header-right">
+    <a href="index.html" class="tab-btn">🗾 エリア特性マップ</a>
+    <a href="hazard.html" class="tab-btn active">⚠️ ハザードマップ</a>
+  </div>
+</header>
+
+<div id="main-layout">
+
+  <!-- 左サイドバー -->
+  <aside id="left-sidebar">
+
+    <!-- ハザードレイヤー -->
+    <div>
+      <div class="section-title">⚠️ ハザードレイヤー</div>
+      <div class="hazard-controls" id="hazard-controls">
+        <div class="hazard-item" id="item-flood">
+          <input type="checkbox" id="cb-flood" data-key="flood">
+          <div class="hazard-dot" style="background:#4a90d9;"></div>
+          <label for="cb-flood">🌊 洪水浸水想定<span>想定最大規模（河川氾濫）</span></label>
+        </div>
+        <div class="hazard-item" id="item-landslide">
+          <input type="checkbox" id="cb-landslide" data-key="landslide">
+          <div class="hazard-dot" style="background:#e67e22;"></div>
+          <label for="cb-landslide">⛰ 土砂災害警戒<span>崖崩れ・土石流・地すべり</span></label>
+        </div>
+        <div class="hazard-item" id="item-storm">
+          <input type="checkbox" id="cb-storm" data-key="storm">
+          <div class="hazard-dot" style="background:#8e44ad;"></div>
+          <label for="cb-storm">🌀 高潮浸水想定<span>台風・高潮による浸水</span></label>
+        </div>
+        <div class="hazard-item" id="item-tsunami">
+          <input type="checkbox" id="cb-tsunami" data-key="tsunami">
+          <div class="hazard-dot" style="background:#e74c3c;"></div>
+          <label for="cb-tsunami">🔴 津波浸水想定<span>最大クラスの津波</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 透過率 -->
+    <div class="opacity-section">
+      <div class="section-title">🔆 透過率</div>
+      <div class="opacity-row">
+        <input type="range" id="opacity-slider" min="0" max="1" step="0.05" value="0.7">
+        <span class="opacity-val" id="opacity-val">70%</span>
+      </div>
+    </div>
+
+    <!-- ズーム操作 -->
+    <div class="zoom-section">
+      <div class="section-title">🗺 地図操作</div>
+      <button class="ctrl-btn" id="reset-btn">🔄 全国表示</button>
+      <div class="zoom-btns">
+        <button class="ctrl-btn" id="zoom-in-btn">＋</button>
+        <button class="ctrl-btn" id="zoom-out-btn">−</button>
+      </div>
+      <div id="zoom-display">zoom 6</div>
+    </div>
+
+    <!-- 凡例 -->
+    <div class="legend-section">
+      <div class="section-title">📋 凡例</div>
+      <div class="legend-item"><div class="legend-color" style="background:#4a90d9"></div>洪水浸水想定区域</div>
+      <div class="legend-item"><div class="legend-color" style="background:#e67e22"></div>土砂災害警戒区域</div>
+      <div class="legend-item"><div class="legend-color" style="background:#8e44ad"></div>高潮浸水想定区域</div>
+      <div class="legend-item"><div class="legend-color" style="background:#e74c3c"></div>津波浸水想定区域</div>
+    </div>
+
+    <!-- 注意書き -->
+    <div class="notice">
+      データ出典：国土交通省<br>ハザードマップポータルサイト<br><br>
+      ※ zoom 8以上で詳細表示<br>
+      ※ 複数レイヤーの重ね合わせ可
+    </div>
+
+  </aside>
+
+  <!-- 地図エリア -->
+  <div id="map-wrap">
+    <div id="map"></div>
+  </div>
+
+</div>
+
+<script>
+const HAZARD_LAYERS = {
+  flood:     { url: 'https://disaportaldata.gsi.go.jp/raster/01_flood_l2_shinsuishin_data/{z}/{x}/{y}.png',   layer: null },
+  landslide: { url: 'https://disaportaldata.gsi.go.jp/raster/05_doshasaigai/{z}/{x}/{y}.png',                  layer: null },
+  storm:     { url: 'https://disaportaldata.gsi.go.jp/raster/03_takashio_data/{z}/{x}/{y}.png',                layer: null },
+  tsunami:   { url: 'https://disaportaldata.gsi.go.jp/raster/04_tsunami_new_data/{z}/{x}/{y}.png',             layer: null },
+};
+let hazardOpacity = 0.7;
+
+// Leaflet マップ初期化
+const isMobile = window.innerWidth < 768;
+const leafletMap = L.map('map', {
+  center: isMobile ? [36.0, 137.0] : [37.0, 137.0],
+  zoom: isMobile ? 5 : 6,
+  zoomControl: false,
+});
+
+// 国土地理院 淡色地図
+L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
+  attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',
+  maxZoom: 18,
+}).addTo(leafletMap);
+
+// ハザード用カスタムペイン（ベースタイルの上に表示）
+leafletMap.createPane('hazardPane');
+leafletMap.getPane('hazardPane').style.zIndex = 300;
+leafletMap.getPane('hazardPane').style.pointerEvents = 'none';
+
+// ズームUI更新
+leafletMap.on('zoom', () => {
+  document.getElementById('zoom-display').textContent = `zoom ${leafletMap.getZoom()}`;
+});
+
+// ボタン接続
+document.getElementById('zoom-in-btn').onclick  = () => leafletMap.zoomIn();
+document.getElementById('zoom-out-btn').onclick = () => leafletMap.zoomOut();
+document.getElementById('reset-btn').onclick    = () => {
+  leafletMap.setView(isMobile ? [36.0, 137.0] : [37.0, 137.0], isMobile ? 5 : 6);
+};
+
+// ハザードレイヤー切り替え
+function toggleHazard(key, enabled) {
+  const h = HAZARD_LAYERS[key];
+  const item = document.getElementById(`item-${key}`);
+  if (enabled) {
+    if (!h.layer) {
+      h.layer = L.tileLayer(h.url, {
+        opacity: hazardOpacity,
+        maxZoom: 18,
+        pane: 'hazardPane',
+        attribution: '<a href="https://disaportal.gsi.go.jp/">国土交通省ハザードマップポータル</a>',
+      });
+    }
+    h.layer.addTo(leafletMap);
+    item?.classList.add('active');
+  } else {
+    if (h.layer) leafletMap.removeLayer(h.layer);
+    item?.classList.remove('active');
+  }
+}
+
+// チェックボックスイベント
+document.querySelectorAll('#hazard-controls input[type="checkbox"]').forEach(cb => {
+  cb.addEventListener('change', e => toggleHazard(e.target.dataset.key, e.target.checked));
+});
+
+// 透過率スライダー
+const slider = document.getElementById('opacity-slider');
+const opVal  = document.getElementById('opacity-val');
+slider.addEventListener('input', e => {
+  hazardOpacity = parseFloat(e.target.value);
+  opVal.textContent = Math.round(hazardOpacity * 100) + '%';
+  Object.values(HAZARD_LAYERS).forEach(h => {
+    if (h.layer && leafletMap.hasLayer(h.layer)) h.layer.setOpacity(hazardOpacity);
+  });
+});
+
+// デフォルトで洪水レイヤーをON
+document.getElementById('cb-flood').checked = true;
+toggleHazard('flood', true);
+</script>
+</body>
+</html>
