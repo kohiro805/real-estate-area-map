@@ -872,7 +872,8 @@ text.pref-label {
 }
 
 /* ========== MOBILE RESPONSIVE ========== */
-@media (max-width: 768px) {
+/* スマホ + iPadの縦画面 */
+@media (max-width: 768px), (max-width: 1024px) and (orientation: portrait) {
 
   /* ─── 条件①②③: ボトムナビ固定・フロストガラス・セーフエリア ─── */
   #bottom-nav {
@@ -1155,8 +1156,9 @@ text.pref-label {
   #right-sidebar { height: 52vh; }
 }
 
-/* ライトモード × スマホ: 検索欄の下線を上書き（最後に記述して優先度確保） */
-@media (prefers-color-scheme: light) and (max-width: 768px) {
+/* ライトモード × スマホ・iPadの縦画面 */
+@media (prefers-color-scheme: light) and (max-width: 768px),
+       (prefers-color-scheme: light) and (max-width: 1024px) and (orientation: portrait) {
   #search-input {
     border-bottom: 1.5px solid #8e8e93 !important;
     color: #1c1c1e !important;
