@@ -1050,18 +1050,18 @@ text.pref-label {
   /* フローティングウィンドウ */
   #tip { max-width: 88vw; font-size: 0.68rem; }
 
-  /* ─── エリア検索: アンダーラインスタイル ─── */
+  /* ─── エリア検索: カード枠なし・入力枠あり ─── */
   #left-sidebar {
     background: transparent !important;
-    padding: 10px 20px !important;
+    padding: 10px 16px 12px !important;
     gap: 0 !important;
   }
-  /* 検索セクションの外枠を消す */
+  /* 検索セクション: 外カードは消す */
   .sidebar-section:first-child {
     background: none !important;
     border: none !important;
     border-radius: 0 !important;
-    padding: 8px 0 !important;
+    padding: 4px 0 !important;
   }
   /* セクションタイトル */
   .sidebar-section-title {
@@ -1072,26 +1072,23 @@ text.pref-label {
     text-transform: none !important;
     margin-bottom: 8px !important;
   }
-  /* 入力欄: 枠なし・下線のみ */
+  /* 入力欄: 角丸ボーダーあり */
   #search-input {
-    background: transparent !important;
-    border: none !important;
-    border-bottom: 1.5px solid rgba(255,255,255,0.35) !important;
-    border-radius: 0 !important;
-    padding: 8px 0 !important;
+    background: rgba(255,255,255,0.06) !important;
+    border: 1px solid rgba(255,255,255,0.25) !important;
+    border-radius: 12px !important;
+    padding: 11px 16px !important;
     font-size: 16px !important;
     font-weight: 400 !important;
     box-shadow: none !important;
     color: var(--text-primary) !important;
   }
   #search-input:focus {
-    border-bottom-color: var(--accent-blue) !important;
-    background: transparent !important;
-    box-shadow: none !important;
+    border-color: var(--accent-blue) !important;
+    background: rgba(255,255,255,0.08) !important;
   }
   #search-input::placeholder {
     color: var(--text-dim) !important;
-    font-size: 16px !important;
   }
 
   /* ─── モバイルヘッダー: タイトル中央・大きく ─── */
