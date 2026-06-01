@@ -686,14 +686,20 @@ text.pref-label {
     padding: 8px 12px;
     box-sizing: border-box;
   }
-  /* 候補リスト: 検索ボックス直下に表示 */
+  /* 検索ラッパー: 候補リストの基準点 */
+  #search-wrapper {
+    position: relative;
+    width: 100%;
+  }
+  /* 候補リスト: 検索ボックスの真下に表示 */
   #search-suggestions {
     position: absolute;
-    left: 12px;
-    right: 12px;
+    top: 100%;
+    left: 0;
+    right: 0;
     width: auto;
     z-index: 300;
-    margin-top: 0;
+    margin-top: 4px;
   }
 
   /* 地図操作セクション: 非表示 */
@@ -780,8 +786,10 @@ text.pref-label {
     <!-- エリア検索 -->
     <div class="sidebar-section">
       <div class="sidebar-section-title">🔍 エリア検索</div>
-      <input type="text" id="search-input" placeholder="市区町村名を入力してください" autocomplete="off">
-      <div id="search-suggestions"></div>
+      <div id="search-wrapper">
+        <input type="text" id="search-input" placeholder="市区町村名を入力してください" autocomplete="off">
+        <div id="search-suggestions"></div>
+      </div>
     </div>
 
 
@@ -2144,7 +2152,7 @@ function zoomToCity(lat, lng) {
   // モバイルは下パネル(48vh)が地図に重なるため、
   // 見える範囲の中央(上から約22%)に市区町村を配置する
   const isMobile = w < 600;
-  const yCenter = isMobile ? h * 0.22 : h * 0.50;
+  const yCenter = isMobile ? h * 0.14 : h * 0.50;
   const tx = w / 2 - scale * sx;
   const ty = yCenter - scale * sy;
   const transform = d3.zoomIdentity.translate(tx, ty).scale(scale);
