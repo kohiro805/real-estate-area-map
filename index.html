@@ -19,19 +19,32 @@
 }
 
 :root {
-  --bg-primary: #1c1c1e;
-  --bg-panel: rgba(28,28,30,0.70);
-  --bg-glass: rgba(255,255,255,0.05);
-  --border: rgba(255,255,255,0.15);
-  --border-active: rgba(255,255,255,0.40);
-  --text-primary: #ffffff;
+  /* 背景系 */
+  --bg-primary:  #1c1c1e;                   /* body背景 */
+  --bg-panel:    rgba(28,28,30,0.70);        /* パネル・サイドバー */
+  --bg-glass:    rgba(255,255,255,0.08);     /* グラス薄 */
+  --bg-nav:      rgba(28,28,30,0.95);        /* ヘッダー・ナビバー */
+
+  /* ボーダー */
+  --border:        rgba(255,255,255,0.15);   /* パネル共通 */
+  --border-sub:    rgba(255,255,255,0.08);   /* metric-card等 */
+  --border-input:  rgba(255,255,255,0.15);   /* 入力フィールド */
+  --border-active: rgba(255,255,255,0.40);   /* フォーカス・アクティブ */
+
+  /* テキスト */
+  --text-primary:   #ffffff;
   --text-secondary: #d0d0d0;
-  --text-dim: #636366;
-  --accent-blue: #0a84ff;
+  --text-dim:       #636366;
+  --text-ghost:     #8e8e93;                 /* ゴーストボタン */
+
+  /* アクセント・セマンティック */
+  --accent-blue:   #0a84ff;
   --accent-indigo: #5e5ce6;
   --accent-orange: #ff9500;
-  --accent-green: #32d74b;
-  --danger: #ff453a;
+  --success:       #32d74b;
+  --danger:        #ff453a;
+  --accent-green:  #32d74b;                  /* 後方互換 */
+
   --shadow: rgba(0,0,0,0.65);
 }
 
@@ -51,15 +64,20 @@ body {
 
 @media (prefers-color-scheme: light) {
   :root {
-    --bg-primary: #ffffff;
-    --bg-panel: rgba(0,0,0,0.03);
-    --bg-glass: rgba(0,0,0,0.04);
-    --border: rgba(0,0,0,0.08);
-    --border-active: rgba(0,0,0,0.20);
-    --text-primary: #1c1c1e;
+    --bg-primary:    #ffffff;
+    --bg-panel:      rgba(0,0,0,0.03);
+    --bg-glass:      rgba(0,0,0,0.04);
+    --bg-nav:        rgba(255,255,255,0.95);
+    --border:        rgba(0,0,0,0.08);
+    --border-sub:    rgba(0,0,0,0.08);
+    --border-input:  rgba(0,0,0,0.10);
+    --border-active: rgba(0,0,0,0.30);
+    --text-primary:   #1c1c1e;
     --text-secondary: #636366;
-    --text-dim: #8e8e93;
-    --accent-blue: #007aff;
+    --text-dim:       #8e8e93;
+    --text-ghost:     #8e8e93;
+    --accent-blue:   #007aff;
+    --danger:        #ff3b30;
     --shadow: rgba(0,0,0,0.15);
   }
 }
@@ -67,7 +85,7 @@ body {
 /* ========== HEADER ========== */
 #app-header {
   height: 56px;
-  background: rgba(28,28,30,0.85);
+  background: var(--bg-nav);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
@@ -194,26 +212,26 @@ body {
 #search-input {
   width: 100%;
   padding: 9px 12px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-input);
   border-radius: 10px;
   color: var(--text-primary);
-  font-size: 0.85rem;
+  font-size: 16px;
   outline: none;
   transition: all 140ms ease;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(16px);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
 }
 #search-input:focus {
   border-color: var(--border-active);
-  background: rgba(255,255,255,0.1);
-  box-shadow: 0 0 0 2px rgba(10,132,255,0.25);
+  background: rgba(255,255,255,0.10);
 }
 #search-input::placeholder { color: var(--text-dim); }
 #search-suggestions {
   display: none;
-  background: rgba(28,28,30,0.95);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--bg-nav);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border);
   border-radius: 10px;
   margin-top: 6px;
@@ -360,12 +378,12 @@ body {
   position: absolute;
   bottom: 36px;
   right: 16px;
-  background: rgba(28,28,30,0.85);
+  background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 10px 12px;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   z-index: 10;
   min-width: 160px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);
@@ -512,11 +530,11 @@ text.pref-label {
 /* Panel Cards */
 .panel-card {
   background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid var(--border-sub);
   border-radius: 12px;
   padding: 14px;
   margin-bottom: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 .panel-card-title {
   font-size: 0.65rem;
