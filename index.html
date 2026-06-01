@@ -1050,42 +1050,48 @@ text.pref-label {
   /* フローティングウィンドウ */
   #tip { max-width: 88vw; font-size: 0.68rem; }
 
-  /* ─── エリア検索カードスタイル ─── */
-  /* サイドバー全体をカード化 */
+  /* ─── エリア検索: アンダーラインスタイル ─── */
   #left-sidebar {
-    background: var(--bg-panel) !important;
-    padding: 12px 16px !important;
+    background: transparent !important;
+    padding: 10px 20px !important;
     gap: 0 !important;
   }
-  /* 検索セクションをカード風に */
+  /* 検索セクションの外枠を消す */
   .sidebar-section:first-child {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 12px 14px !important;
+    background: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 8px 0 !important;
   }
-  /* セクションタイトル: 参考アプリ準拠 */
+  /* セクションタイトル */
   .sidebar-section-title {
-    font-size: 15px !important;
-    font-weight: 600 !important;
-    color: var(--text-primary) !important;
-    letter-spacing: 0 !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: var(--text-secondary) !important;
+    letter-spacing: 0.02em !important;
     text-transform: none !important;
-    margin-bottom: 10px !important;
+    margin-bottom: 8px !important;
   }
-  /* 検索入力: 参考アプリのように角丸・ガラス感 */
+  /* 入力欄: 枠なし・下線のみ */
   #search-input {
-    background: rgba(255,255,255,0.06) !important;
-    border: 1px solid var(--border-input) !important;
-    border-radius: 12px !important;
-    padding: 12px 16px !important;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1.5px solid rgba(255,255,255,0.35) !important;
+    border-radius: 0 !important;
+    padding: 8px 0 !important;
     font-size: 16px !important;
     font-weight: 400 !important;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.12) !important;
+    box-shadow: none !important;
+    color: var(--text-primary) !important;
+  }
+  #search-input:focus {
+    border-bottom-color: var(--accent-blue) !important;
+    background: transparent !important;
+    box-shadow: none !important;
   }
   #search-input::placeholder {
     color: var(--text-dim) !important;
-    font-size: 15px !important;
+    font-size: 16px !important;
   }
 
   /* ─── モバイルヘッダー: タイトル中央・大きく ─── */
