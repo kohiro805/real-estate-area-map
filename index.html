@@ -161,6 +161,33 @@ body {
   /* エリア特徴のテキスト */
   #panel-body [style*="color:var(--text-secondary)"],
   #panel-body p, #panel-body li { color: var(--text-primary) !important; }
+
+  /* ライトモード: 左ドロワー */
+  #drawer {
+    background: rgba(255, 255, 255, 0.90) !important;
+    border-right-color: rgba(0, 0, 0, 0.08) !important;
+  }
+  #drawer-header {
+    border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+  }
+  #drawer-title {
+    color: var(--text-primary) !important;
+  }
+  #drawer-close {
+    background: rgba(0, 0, 0, 0.05) !important;
+    border-color: rgba(0, 0, 0, 0.08) !important;
+    color: var(--text-dim) !important;
+  }
+  #drawer-close:hover {
+    background: rgba(0, 0, 0, 0.10) !important;
+    color: var(--text-primary) !important;
+  }
+  .drawer-item:hover {
+    background: rgba(0, 0, 0, 0.04) !important;
+  }
+  .drawer-item:active {
+    background: rgba(0, 0, 0, 0.08) !important;
+  }
 }
 
 /* ========== HEADER ========== */
