@@ -2770,6 +2770,10 @@ function closeCityPanel() {
   svg.selectAll('path.muni').classed('selected-muni', false);
   svg.selectAll('path.pref').classed('active', false);
   selected = null;
+
+  // 検索入力欄のテキストをクリア
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) searchInput.value = '';
 }
 
 function zoomToCity(lat, lng) {
