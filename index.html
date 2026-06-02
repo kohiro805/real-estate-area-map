@@ -1431,10 +1431,26 @@ function _loadScript(src) {
 
 function makeProjection(w, h){
   const isMobile = w < 600;
+  
+  // iPad / タブレットサイズ（タッチ対応デバイス、または画面幅から判定）
+  const isiPad = w >= 600 && w <= 1180 && (navigator.maxTouchPoints > 0 || /iPad|Macintosh/.test(navigator.userAgent));
+  
+  let scaleFactor = isMobile ? 3.0 : 1.28;
+  let tx = w * (isMobile ? 0.46 : 0.42);
+  let ty = h * (isMobile ? 0.46 : 0.52);
+
+  if (isiPad) {
+    const isPortrait = h > w;
+    // iPad縦画面（Portrait）と横画面（Landscape）でスケールと中心位置を微調整
+    scaleFactor = isPortrait ? 2.4 : 1.7;
+    tx = w * (isPortrait ? 0.47 : 0.44);
+    ty = h * (isPortrait ? 0.48 : 0.50);
+  }
+
   return d3.geoMercator()
     .center([137, 37])
-    .scale(w * (isMobile ? 3.0 : 1.28))
-    .translate([w * (isMobile ? 0.46 : 0.42), h * (isMobile ? 0.46 : 0.52)]);
+    .scale(w * scaleFactor)
+    .translate([tx, ty]);
 }
 
 let projFn, pathFn;
