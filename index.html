@@ -380,6 +380,7 @@ body {
   flex: 1;
   height: 32px;
   padding: 0;
+  box-sizing: border-box;
   background: rgba(160,160,160,0.15);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -387,8 +388,9 @@ body {
   font-size: 1rem;
   cursor: pointer;
   transition: all 140ms ease;
-  text-align: center;
-  line-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   backdrop-filter: blur(8px);
 }
 .ctrl-btn:hover {
@@ -402,7 +404,11 @@ body {
   transition: transform 120ms ease;
 }
 #zoom-ratio-display {
-  padding: 6px 10px;
+  height: 32px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--border);
   border-radius: 10px;
