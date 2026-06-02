@@ -1188,20 +1188,31 @@ text.pref-label {
 
   /* ─── モバイルヘッダー: タイトル中央・大きく ─── */
   #app-header {
+    display: flex;
+    align-items: center;
     justify-content: center;
     padding: 0 12px;
+    position: relative;
   }
   #header-left {
-    flex-direction: column;
+    display: flex;
     align-items: center;
-    text-align: center;
-    gap: 0;
+    justify-content: center;
     width: 100%;
+    height: 100%;
+    position: relative;
+  }
+  #hamburger-btn {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
   }
   #header-logo {
     font-size: 1.15rem;
     font-weight: 700;
     letter-spacing: 0.02em;
+    text-align: center;
   }
   #header-sub { display: none; }
 
@@ -1265,10 +1276,10 @@ text.pref-label {
       </div>
       <span class="drawer-arrow">↗</span>
     </a>
-    <a href="https://toshikeikaku-info.jp/" target="_blank" rel="noopener" class="drawer-item">
+    <a href="https://maps.gsi.go.jp/" target="_blank" rel="noopener" class="drawer-item">
       <div class="drawer-text">
-        <div class="drawer-name">全国都市計画GISビューア</div>
-        <div class="drawer-desc">用途地域・都市計画情報</div>
+        <div class="drawer-name">地理院地図</div>
+        <div class="drawer-desc">標高・地形・土地利用</div>
       </div>
       <span class="drawer-arrow">↗</span>
     </a>
@@ -1295,7 +1306,7 @@ text.pref-label {
     <a href="index.html" class="tab-btn active">エリア特性マップ</a>
     <a href="https://disaportal.gsi.go.jp/hazardmap/maps/index.html" target="_blank" rel="noopener" class="tab-btn">ハザードマップ ↗</a>
     <a href="https://www.chikamap.jp/chikamap/PrefecturesSelect?mid=325" target="_blank" rel="noopener" class="tab-btn">地価マップ ↗</a>
-    <a href="https://maps.gsi.go.jp/" target="_blank" rel="noopener" class="tab-btn">標高マップ ↗</a>
+    <a href="https://toshikeikaku-info.jp/" target="_blank" rel="noopener" class="tab-btn">都市計画 ↗</a>
   </div>
 </header>
 
@@ -1381,7 +1392,7 @@ text.pref-label {
     <a href="index.html" class="mode-btn active">エリア特性</a>
     <a href="https://disaportal.gsi.go.jp/hazardmap/maps/index.html" target="_blank" rel="noopener" class="mode-btn">ハザード</a>
     <a href="https://www.chikamap.jp/chikamap/PrefecturesSelect?mid=325" target="_blank" rel="noopener" class="mode-btn">地価</a>
-    <a href="https://maps.gsi.go.jp/" target="_blank" rel="noopener" class="mode-btn">標高</a>
+    <a href="https://toshikeikaku-info.jp/" target="_blank" rel="noopener" class="mode-btn">都市計画</a>
   </div>
 </nav>
 
