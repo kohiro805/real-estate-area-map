@@ -924,6 +924,16 @@ text.pref-label {
 .drawer-name { font-size: 0.88rem; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
 .drawer-desc { font-size: 0.7rem; color: var(--text-dim); }
 .drawer-arrow { font-size: 0.75rem; color: var(--text-dim); flex-shrink: 0; }
+.drawer-section-title {
+  padding: 16px 20px 8px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+  text-transform: uppercase;
+}
 
 /* ========== ボトムナビゲーション（デスクトップでは非表示） ========== */
 /* ─── ボトムナビ デスクトップでは非表示 ─── */
@@ -1287,6 +1297,14 @@ text.pref-label {
       <div class="drawer-text">
         <div class="drawer-name">見える賃貸経営</div>
         <div class="drawer-desc">賃貸市場・空室率データ</div>
+      </div>
+      <span class="drawer-arrow">↗</span>
+    </a>
+    <div class="drawer-section-title">その他のアプリ</div>
+    <a href="https://kohiro805.github.io/Real-Estate-Calculator/" target="_blank" rel="noopener" class="drawer-item">
+      <div class="drawer-text">
+        <div class="drawer-name">不動産電卓</div>
+        <div class="drawer-desc">収支シミュレーション・ローン計算</div>
       </div>
       <span class="drawer-arrow">↗</span>
     </a>
