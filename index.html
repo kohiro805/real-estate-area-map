@@ -856,9 +856,8 @@ text.pref-label {
 /* ========== ハンバーガーボタン ========== */
 #hamburger-btn {
   width: 36px; height: 36px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  background: none;
+  border: none;
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -867,14 +866,13 @@ text.pref-label {
   gap: 5px;
   flex-shrink: 0;
   transition: all 140ms ease;
-  backdrop-filter: blur(8px);
   padding: 0;
 }
 #hamburger-btn span {
-  display: block; width: 16px; height: 1.5px;
+  display: block; width: 18px; height: 2px;
   background: var(--text-secondary); border-radius: 2px;
+  transition: background 140ms ease;
 }
-#hamburger-btn:hover { background: rgba(255,255,255,0.12); border-color: var(--border-active); }
 #hamburger-btn:hover span { background: var(--text-primary); }
 
 /* ========== 左ドロワー ========== */
@@ -1261,7 +1259,6 @@ text.pref-label {
   </div>
   <div id="drawer-body">
     <a href="https://www.google.com/maps" target="_blank" rel="noopener" class="drawer-item">
-      <span class="drawer-icon">🗺</span>
       <div class="drawer-text">
         <div class="drawer-name">Google マップ</div>
         <div class="drawer-desc">ストリートビュー・周辺施設検索</div>
@@ -1269,7 +1266,6 @@ text.pref-label {
       <span class="drawer-arrow">↗</span>
     </a>
     <a href="https://toshikeikaku-info.jp/" target="_blank" rel="noopener" class="drawer-item">
-      <span class="drawer-icon">🏙</span>
       <div class="drawer-text">
         <div class="drawer-name">全国都市計画GISビューア</div>
         <div class="drawer-desc">用途地域・都市計画情報</div>
@@ -1277,7 +1273,6 @@ text.pref-label {
       <span class="drawer-arrow">↗</span>
     </a>
     <a href="https://toushi.homes.co.jp/owner/" target="_blank" rel="noopener" class="drawer-item">
-      <span class="drawer-icon">🏠</span>
       <div class="drawer-text">
         <div class="drawer-name">見える賃貸経営</div>
         <div class="drawer-desc">賃貸市場・空室率データ</div>
