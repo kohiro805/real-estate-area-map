@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚠️ 重ねるハザードマップ | 不動産エリア特性マップ</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0f172a; --bg2: #1a2744; --bg3: #1e3155;
+  --text: #f1f5f9; --sub: #94a3b8; --border: rgba(255,255,255,0.09);
+  --blue: #3b82f6; --yellow: #f59e0b;
+}
+body { font-family: 'Hiragino Kaku Gothic Pro','Yu Gothic',Meiryo,sans-serif; background:var(--bg); color:var(--text); height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
+
+/* ヘッダー */
+#app-header { height:56px; background:rgba(15,23,42,0.95); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 20px; flex-shrink:0; z-index:1000; }
+#header-left { display:flex; align-items:center; gap:12px; }
+#header-logo { font-size:1.1rem; font-weight:700; }
+#header-sub { font-size:0.65rem; color:var(--sub); letter-spacing:0.08em; }
+#header-right { display:flex; gap:8px; }
+.tab-btn { padding:6px 16px; border-radius:6px; font-size:0.75rem; font-weight:600; cursor:pointer; border:1px solid var(--border); text-decoration:none; display:inline-flex; align-items:center; gap:5px; transition:all 0.2s; }
+.tab-btn.active { background:var(--blue); color:#fff; border-color:var(--blue); }
+.tab-btn:not(.active) { background:rgba(255,255,255,0.06); color:var(--sub); }
+.tab-btn:not(.active):hover { background:rgba(255,255,255,0.12); color:var(--text); }
+
+/* メインレイアウト */
+#main { display:flex; flex:1; overflow:hidden; }
+
+/* 左サイドバー */
+#sidebar { width:270px; flex-shrink:0; background:var(--bg2); border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+
+/* 検索 */
+#search-box { padding:10px 12px; border-bottom:1px solid var(--border); position:relative; }
+#search-input { width:100%; padding:7px 10px; background:rgba(255,255,255,0.06); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:16px; outline:none; }
+#search-input:focus { border-color:var(--blue); }
+#search-input::placeholder { color:#4b5563; font-size:0.8rem; }
+#search-results { display:none; position:absolute; left:12px; right:12px; background:var(--bg2); border:1px solid var(--border); border-radius:6px; margin-top:2px; z-index:2000; max-height:200px; overflow-y:auto; box-shadow:0 8px 20px rgba(0,0,0,0.4); }
+.s-item { padding:8px 12px; cursor:pointer; font-size:0.8rem; border-bottom:1px solid var(--border); }
+.s-item:hover { background:rgba(255,255,255,0.05); }
+
+/* レイヤーパネル */
+#layers { flex:1; overflow-y:auto; padding:8px 0; }
+#layers::-webkit-scrollbar { width:4px; }
+#layers::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+
+.cat { border-bottom:1px solid var(--border); }
+.cat-header { display:flex; align-items:center; gap:8px; padding:9px 14px; cursor:pointer; user-select:none; transition:background 0.15s; }
+.cat-header:hover { background:rgba(255,255,255,0.04); }
+.cat-icon { font-size:1rem; width:20px; text-align:center; flex-shrink:0; }
+.cat-name { font-size:0.78rem; font-weight:700; flex:1; }
+.cat-arrow { font-size:0.65rem; color:var(--sub); transition:transform 0.2s; }
+.cat-arrow.open { transform:rotate(90deg); }
+.cat-body { display:none; padding:0 0 6px 0; }
+.cat-body.open { display:block; }
+
+.layer-item { display:flex; align-items:flex-start; gap:8px; padding:5px 14px 5px 36px; cursor:pointer; transition:background 0.15s; }
+.layer-item:hover { background:rgba(255,255,255,0.04); }
+.layer-item input[type="checkbox"] { width:14px; height:14px; accent-color:var(--blue); cursor:pointer; flex-shrink:0; margin-top:2px; }
+.layer-label { font-size:0.75rem; color:var(--text); line-height:1.4; cursor:pointer; }
+.layer-sub { font-size:0.65rem; color:var(--sub); margin-top:1px; }
+
+/* 凡例エリア */
+#legend-area { border-top:1px solid var(--border); padding:10px 12px; max-height:220px; overflow-y:auto; }
+.legend-block { margin-bottom:10px; }
+.legend-title { font-size:0.62rem; font-weight:700; color:var(--sub); letter-spacing:0.06em; margin-bottom:6px; }
+.legend-row { display:flex; align-items:center; gap:6px; margin-bottom:3px; }
+.legend-swatch { width:16px; height:12px; border-radius:2px; flex-shrink:0; }
+.legend-text { font-size:0.68rem; color:var(--text); }
+.legend-sub { font-size:0.58rem; color:var(--sub); }
+
+/* 地図 */
+#map-wrap { flex:1; position:relative; }
+#map { width:100%; height:100%; }
+.leaflet-control-attribution { background:rgba(15,23,42,0.8)!important; color:#64748b!important; font-size:0.55rem!important; }
+.leaflet-control-attribution a { color:#94a3b8!important; }
+
+/* ズームUI */
+#zoom-ui { position:absolute; bottom:20px; left:10px; z-index:500; display:flex; flex-direction:column; gap:4px; }
+.z-btn { width:32px; height:32px; background:rgba(15,23,42,0.88); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:1.1rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.15s; }
+.z-btn:hover { background:rgba(59,130,246,0.3); }
+#zoom-lv { font-size:0.6rem; color:var(--sub); text-align:center; }
+
+/* スマホ */
+@media (max-width:768px) {
+  #app-header { height:44px; padding:0 12px; }
+  #header-logo { font-size:0.85rem; }
+  #header-sub { display:none; }
+  .tab-btn { padding:4px 10px; font-size:0.68rem; }
+  #sidebar { width:100%; height:auto; max-height:42vh; border-right:none; border-bottom:1px solid var(--border); }
+  #main { flex-direction:column; }
+  #layers { max-height:120px; }
+  #legend-area { max-height:80px; }
+}
+</style>
+</head>
+<body>
+
+<header id="app-header">
+  <div id="header-left">
+    <div id="header-logo">🗾 不動産エリア特性マップ</div>
+    <div id="header-sub">重ねるハザードマップ</div>
+  </div>
+  <div id="header-right">
+    <a href="index.html" class="tab-btn">🗾 エリア特性マップ</a>
+    <a href="hazard.html" class="tab-btn active">⚠️ ハザードマップ</a>
+  </div>
+</header>
+
+<div id="main">
+
+  <!-- 左サイドバー -->
+  <aside id="sidebar">
+
+    <!-- 住所検索 -->
+    <div id="search-box">
+      <input type="text" id="search-input" placeholder="🔍 住所・地名を入力">
+      <div id="search-results"></div>
+    </div>
+
+    <!-- レイヤー選択 -->
+    <div id="layers">
+
+      <!-- 洪水 -->
+      <div class="cat" id="cat-flood">
+        <div class="cat-header" onclick="toggleCat('flood')">
+          <span class="cat-icon">🌊</span>
+          <span class="cat-name">洪水浸水想定区域</span>
+          <span class="cat-arrow" id="arr-flood">▶</span>
+        </div>
+        <div class="cat-body" id="body-flood">
+          <label class="layer-item">
+            <input type="checkbox" data-key="flood_l2" checked>
+            <span class="layer-label">想定最大規模<span class="layer-sub"><br>（L2・河川氾濫）</span></span>
+          </label>
+          <label class="layer-item">
+            <input type="checkbox" data-key="flood_keizoku">
+            <span class="layer-label">浸水継続時間<span class="layer-sub"><br>（想定最大規模）</span></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 内水 -->
+      <div class="cat" id="cat-naisui">
+        <div class="cat-header" onclick="toggleCat('naisui')">
+          <span class="cat-icon">🌧</span>
+          <span class="cat-name">雨水出水（内水）浸水想定区域</span>
+          <span class="cat-arrow" id="arr-naisui">▶</span>
+        </div>
+        <div class="cat-body" id="body-naisui">
+          <label class="layer-item">
+            <input type="checkbox" data-key="naisui">
+            <span class="layer-label">内水浸水想定区域<span class="layer-sub"><br>（雨水出水）</span></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 高潮 -->
+      <div class="cat" id="cat-storm">
+        <div class="cat-header" onclick="toggleCat('storm')">
+          <span class="cat-icon">🌀</span>
+          <span class="cat-name">高潮浸水想定区域</span>
+          <span class="cat-arrow" id="arr-storm">▶</span>
+        </div>
+        <div class="cat-body" id="body-storm">
+          <label class="layer-item">
+            <input type="checkbox" data-key="storm">
+            <span class="layer-label">高潮浸水想定区域<span class="layer-sub"><br>（最大想定規模）</span></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 津波 -->
+      <div class="cat" id="cat-tsunami">
+        <div class="cat-header" onclick="toggleCat('tsunami')">
+          <span class="cat-icon">🔴</span>
+          <span class="cat-name">津波浸水想定</span>
+          <span class="cat-arrow" id="arr-tsunami">▶</span>
+        </div>
+        <div class="cat-body" id="body-tsunami">
+          <label class="layer-item">
+            <input type="checkbox" data-key="tsunami">
+            <span class="layer-label">津波浸水想定<span class="layer-sub"><br>（最大クラス）</span></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 土砂災害 -->
+      <div class="cat" id="cat-dosya">
+        <div class="cat-header" onclick="toggleCat('dosya')">
+          <span class="cat-icon">⛰</span>
+          <span class="cat-name">土砂災害警戒区域</span>
+          <span class="cat-arrow" id="arr-dosya">▶</span>
+        </div>
+        <div class="cat-body" id="body-dosya">
+          <label class="layer-item">
+            <input type="checkbox" data-key="dosya_kyukeisha">
+            <span class="layer-label">急傾斜地の崩壊<span class="layer-sub"><br>（がけ崩れ）</span></span>
+          </label>
+          <label class="layer-item">
+            <input type="checkbox" data-key="dosya_dosekiryu">
+            <span class="layer-label">土石流<span class="layer-sub"><br>（渓流・谷地形）</span></span>
+          </label>
+          <label class="layer-item">
+            <input type="checkbox" data-key="dosya_jisuberi">
+            <span class="layer-label">地すべり<span class="layer-sub"><br>（緩斜面・地下水）</span></span>
+          </label>
+          <label class="layer-item">
+            <input type="checkbox" data-key="dosya_nadare">
+            <span class="layer-label">雪崩危険箇所</span>
+          </label>
+        </div>
+      </div>
+
+    </div><!-- /layers -->
+
+    <!-- 凡例 -->
+    <div id="legend-area">
+      <div id="legend-content">
+        <div style="font-size:0.7rem;color:var(--sub);text-align:center;padding:8px;">レイヤーを選択すると凡例が表示されます</div>
+      </div>
+    </div>
+
+  </aside><!-- /sidebar -->
+
+  <!-- 地図 -->
+  <div id="map-wrap">
+    <div id="map"></div>
+    <div id="zoom-ui">
+      <button class="z-btn" id="zi">＋</button>
+      <button class="z-btn" id="zo">−</button>
+      <div id="zoom-lv">zoom 5</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── タイル定義 ────────────────────────────────────────────
+const TILES = {
+  flood_l2:         'https://disaportaldata.gsi.go.jp/raster/01_flood_l2_shinsuishin_data/{z}/{x}/{y}.png',
+  flood_keizoku:    'https://disaportaldata.gsi.go.jp/raster/01_flood_l2_keizoku_data/{z}/{x}/{y}.png',
+  naisui:           'https://disaportaldata.gsi.go.jp/raster/02_naisui_data/{z}/{x}/{y}.png',
+  storm:            'https://disaportaldata.gsi.go.jp/raster/03_hightide_l2_shinsuishin_data/{z}/{x}/{y}.png',
+  tsunami:          'https://disaportaldata.gsi.go.jp/raster/04_tsunami_newlegend_data/{z}/{x}/{y}.png',
+  dosya_kyukeisha:  'https://disaportaldata.gsi.go.jp/raster/05_kyukeishakeikaikuiki/{z}/{x}/{y}.png',
+  dosya_dosekiryu:  'https://disaportaldata.gsi.go.jp/raster/05_dosekiryukeikaikuiki/{z}/{x}/{y}.png',
+  dosya_jisuberi:   'https://disaportaldata.gsi.go.jp/raster/05_jisuberikeikaikuiki/{z}/{x}/{y}.png',
+  dosya_nadare:     'https://disaportaldata.gsi.go.jp/raster/05_nadarekikenkasyo/{z}/{x}/{y}.png',
+};
+const layers = {};
+const ATTR = '<a href="https://disaportal.gsi.go.jp/">国土交通省ハザードマップポータル</a>';
+
+// ─── Leaflet初期化 ─────────────────────────────────────────
+const isMobile = window.innerWidth < 768;
+const map = L.map('map', { center:[37.5,140.5], zoom:5, zoomControl:false });
+
+L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
+  attribution:'<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',
+  maxZoom:18
+}).addTo(map);
+
+map.createPane('hazardPane');
+map.getPane('hazardPane').style.zIndex = 300;
+map.getPane('hazardPane').style.pointerEvents = 'none';
+
+map.on('zoom', () => { document.getElementById('zoom-lv').textContent = 'zoom '+map.getZoom(); });
+document.getElementById('zi').onclick = () => map.zoomIn();
+document.getElementById('zo').onclick = () => map.zoomOut();
+
+// ─── レイヤーON/OFF ────────────────────────────────────────
+function toggleLayer(key, on) {
+  if (on) {
+    if (!layers[key]) {
+      layers[key] = L.tileLayer(TILES[key], { opacity:0.7, maxZoom:18, pane:'hazardPane', attribution:ATTR });
+    }
+    layers[key].addTo(map);
+  } else {
+    if (layers[key]) map.removeLayer(layers[key]);
+  }
+  updateLegend();
+}
+
+// チェックボックスイベント
+document.querySelectorAll('#layers input[type="checkbox"]').forEach(cb => {
+  cb.addEventListener('change', e => toggleLayer(e.target.dataset.key, e.target.checked));
+});
+
+// ─── カテゴリ折りたたみ ────────────────────────────────────
+function toggleCat(id) {
+  const body = document.getElementById('body-'+id);
+  const arr  = document.getElementById('arr-'+id);
+  const open = body.classList.toggle('open');
+  arr.classList.toggle('open', open);
+}
+// 初期展開
+['flood','dosya'].forEach(toggleCat);
+
+// ─── 凡例 ──────────────────────────────────────────────────
+const LEGENDS = {
+  flood_l2: {
+    title:'🌊 洪水浸水深さ（想定最大規模）',
+    rows:[
+      {c:'#8B1A8B', t:'20m〜'},
+      {c:'#C44040', t:'10〜20m'},
+      {c:'#F57575', t:'5.0〜10m', s:'2階屋根以上'},
+      {c:'#FFB5A0', t:'3.0〜5.0m', s:'2階部分まで'},
+      {c:'#FFE0B4', t:'0.5〜3.0m', s:'1階天井まで'},
+      {c:'#F9F4C5', t:'0.0〜0.5m', s:'大人の膝まで', border:true},
+    ]
+  },
+  flood_keizoku: {
+    title:'🌊 浸水継続時間',
+    rows:[
+      {c:'#800080', t:'1週間以上'},
+      {c:'#FF0000', t:'3日〜1週間'},
+      {c:'#FF8C00', t:'1日〜3日'},
+      {c:'#FFD700', t:'12時間〜1日'},
+      {c:'#FFFF99', t:'〜12時間', border:true},
+    ]
+  },
+  naisui: {
+    title:'🌧 内水浸水深さ',
+    rows:[
+      {c:'#8B1A8B', t:'5.0m以上'},
+      {c:'#F57575', t:'3.0〜5.0m'},
+      {c:'#FFB5A0', t:'1.0〜3.0m'},
+      {c:'#FFE0B4', t:'0.5〜1.0m'},
+      {c:'#F9F4C5', t:'0〜0.5m', border:true},
+    ]
+  },
+  storm: {
+    title:'🌀 高潮浸水深さ',
+    rows:[
+      {c:'#8B1A8B', t:'10m以上'},
+      {c:'#C44040', t:'5.0〜10m'},
+      {c:'#F57575', t:'3.0〜5.0m'},
+      {c:'#FFB5A0', t:'1.0〜3.0m'},
+      {c:'#FFE0B4', t:'0.5〜1.0m'},
+      {c:'#F9F4C5', t:'0〜0.5m', border:true},
+    ]
+  },
+  tsunami: {
+    title:'🔴 津波浸水深さ',
+    rows:[
+      {c:'#8B1A8B', t:'20m以上'},
+      {c:'#C44040', t:'10〜20m'},
+      {c:'#F57575', t:'5.0〜10m'},
+      {c:'#FFB5A0', t:'3.0〜5.0m'},
+      {c:'#FFE0B4', t:'1.0〜3.0m'},
+      {c:'#F9F4C5', t:'0〜1.0m', border:true},
+    ]
+  },
+  dosya_kyukeisha: {
+    title:'⛰ 急傾斜地の崩壊',
+    rows:[
+      {c:'#FF2800', t:'特別警戒区域（指定済）'},
+      {c:'#FFD700', t:'警戒区域（指定済）'},
+    ]
+  },
+  dosya_dosekiryu: {
+    title:'⛰ 土石流',
+    rows:[
+      {c:'#8B0000', t:'特別警戒区域（指定済）'},
+      {c:'#FFD700', t:'警戒区域（指定済）'},
+    ]
+  },
+  dosya_jisuberi: {
+    title:'⛰ 地すべり',
+    rows:[
+      {c:'#FF008C', t:'特別警戒区域（指定済）'},
+      {c:'#FF8C00', t:'警戒区域（指定済）'},
+    ]
+  },
+  dosya_nadare: {
+    title:'⛰ 雪崩危険箇所',
+    rows:[{c:'#87CEEB', t:'雪崩危険箇所'}]
+  },
+};
+
+function updateLegend() {
+  const checks = [...document.querySelectorAll('#layers input:checked')];
+  const el = document.getElementById('legend-content');
+  if (!checks.length) {
+    el.innerHTML = '<div style="font-size:0.7rem;color:var(--sub);text-align:center;padding:8px;">レイヤーを選択すると凡例が表示されます</div>';
+    return;
+  }
+  el.innerHTML = checks.map(cb => {
+    const lg = LEGENDS[cb.dataset.key];
+    if (!lg) return '';
+    const rows = lg.rows.map(r =>
+      `<div class="legend-row">
+        <div class="legend-swatch" style="background:${r.c};${r.border?'border:1px solid rgba(255,255,255,0.3);':''}"></div>
+        <span class="legend-text">${r.t}${r.s ? `<br><span class="legend-sub">${r.s}</span>` : ''}</span>
+      </div>`
+    ).join('');
+    return `<div class="legend-block"><div class="legend-title">${lg.title}</div>${rows}</div>`;
+  }).join('');
+}
+
+// 初期ONレイヤー
+document.querySelector('[data-key="flood_l2"]').dispatchEvent(new Event('change',{bubbles:true}));
+
+// ─── 住所検索（国土地理院API）─────────────────────────────
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+let searchTimer = null;
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  const q = searchInput.value.trim();
+  if (q.length < 1) { searchResults.style.display = 'none'; return; }
+  searchTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(`https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      renderResults(data || []);
+    } catch(e) { searchResults.style.display = 'none'; }
+  }, 300);
+});
+
+document.addEventListener('click', e => { if (!e.target.closest('#search-box')) searchResults.style.display = 'none'; });
+
+function renderResults(items) {
+  searchResults.innerHTML = '';
+  if (!items.length) { searchResults.style.display='none'; return; }
+  items.slice(0,8).forEach(item => {
+    const name = item.properties?.title || '';
+    const [lng, lat] = item.geometry?.coordinates || [];
+    if (!lat || !lng) return;
+    const div = document.createElement('div');
+    div.className = 's-item';
+    div.textContent = name;
+    div.onclick = () => {
+      searchInput.value = name;
+      searchResults.style.display = 'none';
+      map.flyTo([lat, lng], 13, {duration:0.8});
+      let marker = L.marker([lat, lng]).addTo(map).bindPopup(`<b>${name}</b>`,{closeButton:false}).openPopup();
+      setTimeout(() => map.removeLayer(marker), 5000);
+    };
+    searchResults.appendChild(div);
+  });
+  searchResults.style.display = 'block';
+}
+</script>
+</body>
+</html>

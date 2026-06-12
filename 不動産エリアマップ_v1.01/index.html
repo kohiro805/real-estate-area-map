@@ -1,0 +1,2964 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="不動産マップ">
+<meta name="theme-color" content="#1c1c1e">
+<link rel="manifest" href="manifest.json?v=20250602">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/png" href="favicon.png">
+<title>不動産マップ</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+<style>
+*, *::before, *::after {
+  box-sizing: border-box; margin: 0; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+:root {
+  /* 背景系 */
+  --bg-primary:  #1c1c1e;                   /* body背景 */
+  --bg-panel:    rgba(28,28,30,0.70);        /* パネル・サイドバー */
+  --bg-glass:    rgba(255,255,255,0.08);     /* グラス薄 */
+  --bg-nav:      rgba(28,28,30,0.95);        /* ヘッダー・ナビバー */
+
+  /* ボーダー */
+  --border:        rgba(255,255,255,0.15);   /* パネル共通 */
+  --border-sub:    rgba(255,255,255,0.08);   /* metric-card等 */
+  --border-input:  rgba(255,255,255,0.15);   /* 入力フィールド */
+  --border-active: rgba(255,255,255,0.40);   /* フォーカス・アクティブ */
+
+  /* テキスト */
+  --text-primary:   #ffffff;
+  --text-secondary: #d0d0d0;
+  --text-dim:       #636366;
+  --text-ghost:     #8e8e93;                 /* ゴーストボタン */
+
+  /* アクセント・セマンティック */
+  --accent-blue:   #0a84ff;
+  --accent-indigo: #5e5ce6;
+  --accent-orange: #ff9500;
+  --success:       #32d74b;
+  --danger:        #ff453a;
+  --accent-green:  #32d74b;                  /* 後方互換 */
+
+  --shadow: rgba(0,0,0,0.65);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont,
+    "SF Pro Rounded","SF Pro Display","SF Pro Text",
+    "Helvetica Neue", 'Hiragino Kaku Gothic Pro','Yu Gothic',Meiryo,sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100dvh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  overflow-x: hidden;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg-primary:    #ffffff;
+    --bg-panel:      rgba(0,0,0,0.03);
+    --bg-glass:      rgba(0,0,0,0.04);
+    --bg-nav:        rgba(255,255,255,0.95);
+    --border:        rgba(0,0,0,0.08);
+    --border-sub:    rgba(0,0,0,0.08);
+    --border-input:  rgba(0,0,0,0.10);
+    --border-active: rgba(0,0,0,0.30);
+    --text-primary:   #1c1c1e;
+    --text-secondary: #636366;
+    --text-dim:       #8e8e93;
+    --text-ghost:     #8e8e93;
+    --accent-blue:   #007aff;
+    --danger:        #ff3b30;
+    --shadow: rgba(0,0,0,0.15);
+    --map-bg: #e8e8ed;    /* ライトモードの地図背景 */
+  }
+  /* ライトモード: 地図背景 */
+  #map-wrap { background: #e8e8ed !important; }
+
+  /* ライトモード: 検索欄 */
+  #search-input {
+    border-color: var(--border-input) !important;
+    color: var(--text-primary) !important;
+  }
+  #search-input:focus {
+    border-color: var(--accent-blue) !important;
+  }
+  #search-input::placeholder {
+    color: var(--text-dim) !important;
+  }
+  .sidebar-section-title { color: var(--text-secondary) !important; }
+  /* ライトモード: 凡例パネル */
+  #legend-panel {
+    background: rgba(255,255,255,0.90) !important;
+    border-color: rgba(0,0,0,0.10) !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
+  }
+  #legend-title { color: var(--text-dim) !important; }
+  .leg-label { color: var(--text-primary) !important; }
+
+  /* ライトモード: 右パネル */
+  #right-sidebar {
+    background: rgba(255,255,255,0.72) !important;
+    border-left-color: rgba(0,0,0,0.10) !important;
+  }
+  #panel-header { border-bottom-color: rgba(0,0,0,0.08) !important; }
+  .panel-card {
+    background: rgba(0,0,0,0.03) !important;
+    border-color: rgba(0,0,0,0.08) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+  }
+  /* スクロールバーをライトモードに */
+  #panel-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15) !important; }
+  /* ランクバッジをライトモードで視認しやすい色に */
+  .rank-ss { background: rgba(10,132,255,0.12) !important;  color: #006cc1 !important; border-color: rgba(10,132,255,0.25) !important; }
+  .rank-a  { background: rgba(48,215,75,0.12) !important;   color: #1a8c36 !important; border-color: rgba(48,215,75,0.25) !important; }
+  .rank-b  { background: rgba(255,149,0,0.12) !important;   color: #b35a00 !important; border-color: rgba(255,149,0,0.25) !important; }
+  .rank-c  { background: rgba(255,100,0,0.12) !important;   color: #b03800 !important; border-color: rgba(255,100,0,0.25) !important; }
+  .rank-d  { background: rgba(255,69,58,0.12) !important;   color: #b01a12 !important; border-color: rgba(255,69,58,0.25) !important; }
+  /* モバイル: 下部ドロワーも同様 */
+  #right-sidebar.panel-open {
+    background: rgba(255,255,255,0.72) !important;
+    border-top-color: rgba(0,0,0,0.10) !important;
+  }
+
+  /* スコア内訳ボックス（インラインスタイルをoverrideするため!important） */
+  .score-details {
+    background: rgba(0,0,0,0.04) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid rgba(0,0,0,0.08) !important;
+  }
+  .score-details strong { color: var(--text-primary) !important; }
+  .score-details span   { color: var(--text-secondary) !important; }
+
+  /* 投資適合度エリアの区切り線・サブテキスト */
+  #rating-score { border-bottom-color: rgba(0,0,0,0.08) !important; }
+  #rating-score strong { color: var(--accent-orange) !important; }
+  #rating-score span, #rating-score div { color: var(--text-dim) !important; }
+
+  /* パネル内のハードコード色の上書き */
+  #panel-body .data-label span,
+  #panel-body [style*="color:#64748b"],
+  #panel-body [style*="color: #64748b"] { color: var(--text-dim) !important; }
+  #panel-body [style*="color:#94a3b8"],
+  #panel-body [style*="color: #94a3b8"] { color: var(--text-secondary) !important; }
+  #panel-body [style*="color:#f1f5f9"],
+  #panel-body [style*="color: #f1f5f9"] { color: var(--text-primary) !important; }
+  #panel-body [style*="color:#cbd5e1"],
+  #panel-body [style*="color: #cbd5e1"] { color: var(--text-secondary) !important; }
+  #panel-body [style*="border-bottom: 1px solid rgba(255,255,255,"] { border-bottom-color: rgba(0,0,0,0.08) !important; }
+
+  /* エリア特徴のテキスト */
+  #panel-body [style*="color:var(--text-secondary)"],
+  #panel-body p, #panel-body li { color: var(--text-primary) !important; }
+
+  /* ライトモード: 左ドロワー */
+  #drawer {
+    background: rgba(255, 255, 255, 0.90) !important;
+    border-right-color: rgba(0, 0, 0, 0.08) !important;
+  }
+  #drawer-header {
+    border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+  }
+  #drawer-title {
+    color: var(--text-primary) !important;
+  }
+  #drawer-close {
+    background: rgba(0, 0, 0, 0.05) !important;
+    border-color: rgba(0, 0, 0, 0.08) !important;
+    color: var(--text-dim) !important;
+  }
+  #drawer-close:hover {
+    background: rgba(0, 0, 0, 0.10) !important;
+    color: var(--text-primary) !important;
+  }
+  .drawer-item:hover {
+    background: rgba(0, 0, 0, 0.04) !important;
+  }
+  .drawer-item:active {
+    background: rgba(0, 0, 0, 0.08) !important;
+  }
+
+  /* ライトモード: タブボタン */
+  .tab-btn.active {
+    background: #ffffff !important;
+    border-color: var(--border-active) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+    color: var(--text-primary) !important;
+  }
+  .tab-btn:not(.active) {
+    background: rgba(0, 0, 0, 0.02) !important;
+    color: var(--text-dim) !important;
+    border-color: var(--border) !important;
+  }
+  .tab-btn:not(.active):hover {
+    background: rgba(0, 0, 0, 0.05) !important;
+    color: var(--text-secondary) !important;
+    border-color: rgba(0, 0, 0, 0.15) !important;
+  }
+}
+
+/* ========== HEADER ========== */
+#app-header {
+  height: 56px;
+  background: var(--bg-nav);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  flex-shrink: 0;
+  z-index: 100;
+}
+#header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+#header-logo {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#header-sub {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+#header-right {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  flex-shrink: 1;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+#header-right::-webkit-scrollbar { display: none; }
+/* タブナビゲーション */
+.tab-btn {
+  padding: 6px 0;
+  width: 120px;
+  border-radius: 10px;
+  font-size: 0.73rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 140ms ease;
+  border: 1px solid var(--border);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  white-space: nowrap;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.tab-btn.active {
+  background: rgba(255,255,255,0.15);
+  color: var(--text-primary);
+  border-color: var(--border-active);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+.tab-btn:not(.active) {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-dim);
+}
+.tab-btn:not(.active):hover {
+  background: rgba(255,255,255,0.12);
+  color: var(--text-secondary);
+  border-color: rgba(255,255,255,0.25);
+}
+.tab-btn:active {
+  transform: translateY(1px) scale(0.97);
+  transition: transform 120ms ease;
+}
+.header-btn {
+  padding: 6px 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.header-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: var(--text-primary);
+}
+
+/* ========== 3-COLUMN LAYOUT ========== */
+#main-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ========== LEFT SIDEBAR ========== */
+#left-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-section {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.sidebar-section-title {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+/* Search */
+#search-input {
+  width: 100%;
+  padding: 9px 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-input);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 16px;
+  outline: none;
+  transition: all 140ms ease;
+  backdrop-filter: blur(16px);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+#search-input:focus {
+  border-color: var(--border-active);
+  background: rgba(255,255,255,0.10);
+}
+#search-input::placeholder { color: var(--text-dim); }
+#search-suggestions {
+  display: none;
+  background: var(--bg-nav);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-top: 6px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px var(--shadow);
+}
+.suggestion-item {
+  padding: 9px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  transition: background 140ms ease;
+}
+.suggestion-item:last-child { border-bottom: none; }
+.suggestion-item:hover { background: rgba(255,255,255,0.08); }
+.sug-city { font-size: 0.82rem; color: var(--text-primary); font-weight: 600; flex: 1; }
+.sug-pref { font-size: 0.68rem; color: var(--text-secondary); }
+.sug-badge {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.sug-badge.r5 { background: rgba(179,217,247,0.2); color: #b3d9f7; }
+.sug-badge.r4 { background: rgba(179,240,179,0.2); color: #b3f0b3; }
+.sug-badge.r3 { background: rgba(255,244,176,0.2); color: #fff4b0; }
+.sug-badge.r2 { background: rgba(255,217,168,0.2); color: #ffd9a8; }
+.sug-badge.r1 { background: rgba(255,179,179,0.2); color: #ffb3b3; }
+
+/* Legend */
+.leg-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-size: 0.75rem;
+}
+.leg-item:hover { background: rgba(255,255,255,0.04); }
+.leg-item.dim { opacity: 0.3; }
+.leg-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.leg-label { color: var(--text-primary); font-size: 0.73rem; }
+.leg-sub { color: var(--text-secondary); font-size: 0.63rem; margin-left: auto; }
+
+/* Map Controls */
+.map-ctrl-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+  width: 100%;
+}
+.ctrl-btn {
+  flex: 1;
+  height: 32px;
+  padding: 0;
+  box-sizing: border-box;
+  background: rgba(160,160,160,0.15);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 140ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+}
+.ctrl-btn:hover {
+  background: rgba(255,255,255,0.15);
+  border-color: var(--border-active);
+  color: var(--text-primary);
+}
+.ctrl-btn:active {
+  transform: translateY(1px) scale(0.96);
+  background: rgba(255,255,255,0.2);
+  transition: transform 120ms ease;
+}
+#zoom-ratio-display {
+  height: 32px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-dim);
+  font-size: 0.73rem;
+  text-align: center;
+  flex: 1;
+}
+
+/* ========== MAP AREA ========== */
+#map-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #1c1c1e;
+  touch-action: none;
+}
+#map {
+  width: 100%;
+  height: 100%;
+  display: block;
+  will-change: transform;
+}
+#map path {
+  shape-rendering: optimizeSpeed;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Map toggle button */
+#pref-border-toggle {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 7px 14px;
+  background: rgba(15,23,42,0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.73rem;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s;
+}
+#pref-border-toggle:hover {
+  background: rgba(255,255,255,0.1);
+  color: var(--text-primary);
+}
+#pref-border-toggle.active {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+/* 右下フローティング凡例 */
+#legend-panel {
+  position: absolute;
+  bottom: 36px;
+  right: 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 10;
+  min-width: 160px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+#legend-title {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+/* Map path colors */
+path.pref, path.muni {
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+}
+path.pref {
+  stroke: rgba(255,255,255,0.25);
+  stroke-width: 0.8px;
+}
+path.muni {
+  stroke: rgba(180,180,180,0.45);
+  stroke-width: 0.6px;
+}
+path.pref.r5, path.muni.r5 { fill: #b3d9f7; }
+path.pref.r4, path.muni.r4 { fill: #b3f0b3; }
+path.pref.r3, path.muni.r3 { fill: #fff4b0; }
+path.pref.r2, path.muni.r2 { fill: #ffd9a8; }
+path.pref.r1, path.muni.r1 { fill: #ffb3b3; }
+path.pref.r0, path.muni.r0 { fill: #64748b; }
+
+/* ホバー効果はマウス操作のみ（タッチデバイスでは無効） */
+@media (hover: hover) {
+  path.pref, path.muni {
+    transition: filter 0.15s;
+  }
+  path.pref:hover, path.muni:hover {
+    filter: brightness(1.3) drop-shadow(0 0 6px rgba(255,255,255,0.4));
+    stroke: rgba(255,255,255,0.6);
+    stroke-width: 1px;
+  }
+}
+path.pref.active {
+  stroke: #3b82f6;
+  stroke-width: 2px;
+}
+path.muni.selected-muni {
+  stroke: #3b82f6;
+  stroke-width: 2px;
+}
+
+text.pref-label {
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ========== RIGHT SIDEBAR ========== */
+#right-sidebar {
+  width: 360px;
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-left: 1px solid var(--border);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+#right-sidebar.panel-open {
+  display: flex;
+  animation: slideInRight 0.3s ease-out;
+}
+@keyframes slideInRight {
+  from { transform: translateX(40px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+#panel-placeholder { display: none; }
+
+#panel-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Panel Header */
+#panel-header {
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  position: relative;
+}
+#panel-pref-name {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+#panel-city-name {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+#panel-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  background: rgba(160,160,160,0.15);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 140ms ease;
+}
+#panel-close-btn:hover {
+  background: rgba(255,255,255,0.2);
+  border-color: var(--border-active);
+  color: var(--text-primary);
+}
+#panel-close-btn:active { transform: scale(0.92); }
+
+/* Panel Body */
+#panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+#panel-body::-webkit-scrollbar { width: 4px; }
+#panel-body::-webkit-scrollbar-track { background: transparent; }
+#panel-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+/* Panel Cards */
+.panel-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-sub);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.panel-card-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Rating Section */
+#rating-stars {
+  font-size: 1.4rem;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+#rating-score {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.rank-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.rank-ss { background: rgba(179,217,247,0.2); color: #b3d9f7; border: 1px solid rgba(179,217,247,0.3); }
+.rank-a { background: rgba(179,240,179,0.2); color: #b3f0b3; border: 1px solid rgba(179,240,179,0.3); }
+.rank-b { background: rgba(255,244,176,0.2); color: #fff4b0; border: 1px solid rgba(255,244,176,0.3); }
+.rank-c { background: rgba(255,217,168,0.2); color: #ffd9a8; border: 1px solid rgba(255,217,168,0.3); }
+.rank-d { background: rgba(255,179,179,0.2); color: #ffb3b3; border: 1px solid rgba(255,179,179,0.3); }
+
+/* Data rows */
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-sub);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  gap: 8px;
+}
+.data-row:last-child { border-bottom: none; padding-bottom: 0; }
+.data-label {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  font-size: 0.72rem;
+}
+.data-val {
+  color: var(--text-primary);
+  flex: 1;
+  text-align: right;
+}
+/* 数値データ専用（右揃え、強調） */
+.data-val-num {
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: right;
+  letter-spacing: 0.02em;
+}
+.data-unit {
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  margin-left: 3px;
+  font-weight: 400;
+}
+.data-badge-up   { color: var(--success); font-weight: 700; font-size: 0.8rem; }
+.data-badge-down { color: var(--danger);  font-weight: 700; font-size: 0.8rem; }
+.data-badge-flat { color: var(--text-dim); font-weight: 700; font-size: 0.8rem; }
+
+/* Strengths / Risks */
+.eval-list {
+  list-style: none;
+  padding: 0;
+}
+.eval-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-primary);
+  padding: 3px 0;
+  line-height: 1.4;
+}
+.eval-list li::before {
+  content: '•';
+  color: var(--accent-green);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.eval-list.risks li::before {
+  color: #f87171;
+}
+
+/* AI Comment */
+.ai-comment {
+  font-size: 0.75rem;
+  color: #f1f5f9;
+  line-height: 1.7;
+  border-left: 3px solid var(--accent-blue);
+  padding-left: 10px;
+}
+
+/* Tooltip */
+/* ホバーツールチップ（PCのみ） */
+@media (hover: none) {
+  #tip { display: none !important; }  /* タッチデバイス（スマホ）では非表示 */
+}
+#tip {
+  display: none;
+  position: fixed;
+  z-index: 9000;
+  background: var(--bg-nav);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  max-width: 240px;
+  min-width: 180px;
+  box-shadow: 0 8px 32px var(--shadow);
+  pointer-events: none;
+}
+#tip-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.tip-rating-badge {
+  font-size: 0.75rem;
+}
+#tip-info {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.tip-detail-row {
+  display: flex;
+  gap: 8px;
+  font-size: 0.72rem;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+.tip-detail-label {
+  color: var(--text-dim);
+  width: 80px;
+  flex-shrink: 0;
+}
+.tip-detail-val {
+  color: var(--text-secondary);
+  flex: 1;
+}
+.tip-rec-box {
+  margin-top: 8px;
+  padding: 8px;
+  background: rgba(10,132,255,0.08);
+  border-radius: 8px;
+  font-size: 0.7rem;
+  color: var(--accent-blue);
+  line-height: 1.5;
+  border: 1px solid rgba(10,132,255,0.18);
+}
+
+/* Loading & Error badges */
+#loading-badge {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-nav);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 8px 18px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  z-index: 9000;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 16px var(--shadow);
+  white-space: nowrap;
+}
+#offline-error-console {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  max-width: 340px;
+  background: var(--bg-nav);
+  border: 1px solid rgba(255,69,58,0.35);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 0.72rem;
+  color: var(--danger);
+  z-index: 9000;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 16px rgba(255,69,58,0.15);
+}
+
+/* Zoom info */
+#zoom-info {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  text-align: center;
+}
+
+/* Apple-style scrollbars */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+/* Scrollbar for left sidebar */
+#left-sidebar { overflow-y: auto; }
+#left-sidebar::-webkit-scrollbar { width: 4px; }
+#left-sidebar::-webkit-scrollbar-track { background: transparent; }
+#left-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); }
+
+/* ========== ハンバーガーボタン ========== */
+#hamburger-btn {
+  width: 36px; height: 36px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex-shrink: 0;
+  transition: all 140ms ease;
+  padding: 0;
+}
+#hamburger-btn span {
+  display: block; width: 18px; height: 2px;
+  background: var(--text-secondary); border-radius: 2px;
+  transition: background 140ms ease;
+}
+#hamburger-btn:hover span { background: var(--text-primary); }
+
+/* ========== 左ドロワー ========== */
+#drawer-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(2px); z-index: 1100;
+}
+#drawer-overlay.open { display: block; }
+
+#drawer {
+  position: fixed; top: 0; left: 0; bottom: 0;
+  width: 80%; max-width: 340px;
+  background: rgba(28,28,30,0.95);
+  backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+  border-right: 1px solid var(--border);
+  z-index: 1200;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+#drawer.open { transform: translateX(0); }
+
+#drawer-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  height: 60px; flex-shrink: 0;
+}
+#drawer-title { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+#drawer-close {
+  width: 28px; height: 28px;
+  background: rgba(160,160,160,0.15); border: 1px solid var(--border);
+  border-radius: 50%; color: var(--text-dim); font-size: 0.8rem;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 140ms ease;
+}
+#drawer-close:hover { background: rgba(255,255,255,0.2); color: var(--text-primary); }
+#drawer-body { flex: 1; overflow-y: auto; padding: 12px 0; }
+
+.drawer-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 20px; text-decoration: none;
+  transition: background 140ms ease;
+}
+.drawer-item:hover { background: rgba(255,255,255,0.06); }
+.drawer-item:active { background: rgba(255,255,255,0.1); transform: scale(0.98); }
+.drawer-icon { font-size: 1.4rem; flex-shrink: 0; width: 28px; text-align: center; }
+.drawer-text { flex: 1; min-width: 0; }
+.drawer-name { font-size: 0.88rem; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+.drawer-desc { font-size: 0.7rem; color: var(--text-dim); }
+.drawer-arrow { font-size: 0.75rem; color: var(--text-dim); flex-shrink: 0; }
+.drawer-section-title {
+  padding: 16px 20px 8px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+  text-transform: uppercase;
+}
+
+/* ========== ボトムナビゲーション（デスクトップでは非表示） ========== */
+/* ─── ボトムナビ デスクトップでは非表示 ─── */
+#bottom-nav { display: none; }
+
+/* ─── ライトモード（条件⑦） ─── */
+@media (prefers-color-scheme: light) {
+  #bottom-nav {
+    background: rgba(255,255,255,0.95) !important;
+    border-top: 1px solid rgba(0,0,0,0.08) !important;
+  }
+  .mode-toggle { background: rgba(0,0,0,0.02) !important; }
+  .mode-btn {
+    background: rgba(0,0,0,0.04) !important;
+    border-color: rgba(0,0,0,0.08) !important;
+    color: #1c1c1e !important;
+  }
+  .mode-btn.active {
+    background: rgba(0,0,0,0.12) !important;
+    border-color: rgba(0,0,0,0.15) !important;
+    color: #1c1c1e !important;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.04) !important;
+  }
+}
+
+/* ========== MOBILE RESPONSIVE ========== */
+/* スマホ + iPadの縦画面 */
+@media (max-width: 768px), (max-width: 1024px) and (orientation: portrait) {
+
+  /* ─── 条件①②③: ボトムナビ固定・フロストガラス・セーフエリア ─── */
+  #bottom-nav {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 1000;
+    background: rgba(28,28,30,0.95);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border-top: 1px solid rgba(255,255,255,0.12);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
+  }
+
+  /* ─── 条件④: ボタンコンテナ ─── */
+  .mode-toggle {
+    display: flex;
+    padding: 16px 14px;
+    gap: 10px;
+    justify-content: space-between;
+    background: rgba(255,255,255,0.03);
+  }
+
+  /* ─── 条件⑤: ボタン通常状態 ─── */
+  .mode-btn {
+    flex: 1;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.02);
+    color: #ffffff;
+    padding: 14px 8px;
+    font-size: 15px;
+    font-weight: 500;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 140ms ease;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+  }
+
+  /* ─── 条件⑥: ボタンアクティブ状態 ─── */
+  .mode-btn.active {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.4);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  }
+
+  .mode-btn:not(.active):active {
+    background: rgba(255,255,255,0.08);
+    transform: translateY(1px) scale(0.96);
+  }
+
+  /* ─── 条件⑧: 横画面でコンパクト化 ─── */
+  @media (orientation: landscape) {
+    .mode-toggle { padding: 8px 10px; }
+    .mode-btn { padding: 8px 4px; font-size: 13px; }
+  }
+
+  /* ヘッダーのタブは非表示 */
+  #header-right { display: none; }
+
+  /* ボトムナビ分の余白（デザインシステム: 120px推奨） */
+  #main-layout { padding-bottom: 80px; }
+
+  header {
+    height: 44px;
+    padding: 0 10px;
+  }
+  #app-header { border-bottom: none; }
+  #header-logo { font-size: 0.82rem; }
+  #header-sub { display: none; }
+
+  /* メインレイアウト: 縦積み */
+  #main-layout { flex-direction: column; }
+
+  /* 左サイドバー: 縦積み・全幅 */
+  #left-sidebar {
+    width: 100%;
+    height: auto;
+    flex-direction: column;
+    overflow: visible;
+    border-right: none;
+    border-bottom: none;
+    padding: 8px 12px;
+    gap: 0;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 200;
+  }
+
+  .sidebar-section {
+    width: 100%;
+    padding: 0;
+    border: none;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .sidebar-section-title {
+    display: block;
+    font-size: 0.6rem;
+    margin-bottom: 2px;
+    line-height: 1;
+  }
+
+  /* エリア検索: 全幅・font-size:16px必須（iOS自動ズーム防止） */
+  #search-input {
+    width: 100%;
+    font-size: 16px;
+    padding: 8px 12px;
+    box-sizing: border-box;
+  }
+  /* 検索ラッパー: 候補リストの基準点 */
+  #search-wrapper {
+    position: relative;
+    width: 100%;
+  }
+  /* 候補リスト: 検索ボックスの真下に表示 */
+  #search-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    width: auto;
+    z-index: 300;
+    margin-top: 4px;
+  }
+
+  /* 地図操作セクション: 非表示 */
+  #left-sidebar .sidebar-section:last-child { display: none; }
+
+  /* 地図エリア: 最大化 */
+  #map-wrap {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* モバイル: 凡例はデスクトップと同じ右下枠スタイル・少し小さめ */
+  /* iOSブラウザの下バー(safe-area)を考慮して上に避ける */
+  #legend-panel {
+    bottom: 20px;
+    right: 10px;
+    padding: 8px 10px;
+    min-width: 140px;
+  }
+  #legend-title { font-size: 0.58rem; margin-bottom: 6px; }
+  .leg-dot { width: 9px; height: 9px; }
+  .leg-label { font-size: 0.62rem; }
+
+  /* 右パネル: 下部固定ドロワー（地図に重ねる） */
+  #right-sidebar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100% !important;
+    height: 48vh;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    border-radius: 12px 12px 0 0;
+    z-index: 200;
+    overflow-y: auto;
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.5);
+  }
+  #right-sidebar.panel-open {
+    animation: slideUpMobile 0.3s ease-out;
+  }
+  @keyframes slideUpMobile {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  #panel-header { padding: 8px 12px 6px; }
+  #panel-city-name { font-size: 1.05rem; }
+  #panel-pref-name { font-size: 0.6rem; }
+  #panel-body { padding: 8px 12px calc(96px + env(safe-area-inset-bottom, 0px)); }
+  .panel-card { padding: 8px; margin-bottom: 6px; }
+  .data-row { font-size: 0.7rem; padding: 3px 0; }
+  .data-val-num { font-size: 0.75rem; }
+  .score-details { font-size: 0.65rem; }
+  /* ローディングバッジをボトムナビの上に表示 */
+  #loading-badge {
+    bottom: calc(110px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* フローティングウィンドウ */
+  #tip { max-width: 88vw; font-size: 0.68rem; }
+
+  /* ─── エリア検索: アンダーラインスタイル ─── */
+  #left-sidebar {
+    background: transparent !important;
+    padding: 10px 20px !important;
+    gap: 0 !important;
+  }
+  .sidebar-section:first-child {
+    background: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 8px 0 !important;
+  }
+  .sidebar-section-title {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: var(--text-secondary) !important;
+    letter-spacing: 0.02em !important;
+    text-transform: none !important;
+    margin-bottom: 8px !important;
+  }
+  #search-input {
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1.5px solid rgba(255,255,255,0.35) !important;
+    border-radius: 0 !important;
+    padding: 8px 0 !important;
+    font-size: 16px !important;
+    font-weight: 400 !important;
+    box-shadow: none !important;
+    color: var(--text-primary) !important;
+  }
+  #search-input:focus {
+    border-bottom-color: var(--accent-blue) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  #search-input::placeholder {
+    color: var(--text-dim) !important;
+    font-size: 16px !important;
+  }
+
+  /* ─── モバイルヘッダー: タイトル中央・大きく ─── */
+  #app-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    position: relative;
+  }
+  #header-left {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+  #hamburger-btn {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  #header-logo {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-align: center;
+  }
+  #header-sub { display: none; }
+
+  /* サイドバーのセクションタイトルをシンプルに */
+  .sidebar-section-title {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  /* 検索入力フィールドのスタイル（参考アプリ準拠） */
+  #search-input {
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 16px;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+  }
+
+  /* ─── 検索サジェスト修正: main-layout の overflow を変更 ─── */
+  #main-layout { overflow: visible; }
+  /* map-wrapは独自でclip */
+  #map-wrap { overflow: hidden; }
+}
+
+@media (max-width: 480px) {
+  #header-logo { font-size: 1.05rem; }
+  #right-sidebar { height: 52vh; }
+}
+
+/* ライトモード × スマホ・iPadの縦画面 */
+@media (prefers-color-scheme: light) and (max-width: 768px),
+       (prefers-color-scheme: light) and (max-width: 1024px) and (orientation: portrait) {
+  #search-input {
+    border-bottom: 1.5px solid #8e8e93 !important;
+    color: #1c1c1e !important;
+  }
+  #search-input::placeholder { color: #8e8e93 !important; }
+  .sidebar-section-title { color: #636366 !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ドロワーオーバーレイ -->
+<div id="drawer-overlay" onclick="closeDrawer()"></div>
+
+<!-- 左ドロワー -->
+<nav id="drawer">
+  <div id="drawer-header">
+    <span id="drawer-title">メニュー</span>
+    <button id="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div id="drawer-body">
+    <a href="https://www.google.com/maps" target="_blank" rel="noopener" class="drawer-item">
+      <div class="drawer-text">
+        <div class="drawer-name">Google マップ</div>
+        <div class="drawer-desc">ストリートビュー・周辺施設検索</div>
+      </div>
+      <span class="drawer-arrow">↗</span>
+    </a>
+    <a href="https://maps.gsi.go.jp/" target="_blank" rel="noopener" class="drawer-item">
+      <div class="drawer-text">
+        <div class="drawer-name">地理院地図</div>
+        <div class="drawer-desc">標高・地形・土地利用</div>
+      </div>
+      <span class="drawer-arrow">↗</span>
+    </a>
+    <a href="https://toushi.homes.co.jp/owner/" target="_blank" rel="noopener" class="drawer-item">
+      <div class="drawer-text">
+        <div class="drawer-name">見える賃貸経営</div>
+        <div class="drawer-desc">賃貸市場・空室率データ</div>
+      </div>
+      <span class="drawer-arrow">↗</span>
+    </a>
+    <div class="drawer-section-title">その他のアプリ</div>
+    <a href="https://kohiro805.github.io/Real-Estate-Calculator/" target="_blank" rel="noopener" class="drawer-item">
+      <div class="drawer-text">
+        <div class="drawer-name">不動産電卓</div>
+        <div class="drawer-desc">収支シミュレーション・ローン計算</div>
+      </div>
+      <span class="drawer-arrow">↗</span>
+    </a>
+  </div>
+</nav>
+
+<!-- HEADER -->
+<header id="app-header">
+  <div id="header-left">
+    <button id="hamburger-btn" onclick="toggleDrawer()" aria-label="メニューを開く">
+      <span></span><span></span><span></span>
+    </button>
+    <div id="header-logo">不動産マップ</div>
+    <div id="header-sub"></div>
+  </div>
+  <div id="header-right">
+    <a href="index.html" class="tab-btn active">エリア特性マップ</a>
+    <a href="https://disaportal.gsi.go.jp/hazardmap/maps/index.html" target="_blank" rel="noopener" class="tab-btn">ハザードマップ ↗</a>
+    <a href="https://www.chikamap.jp/chikamap/PrefecturesSelect?mid=325" target="_blank" rel="noopener" class="tab-btn">地価マップ ↗</a>
+    <a href="https://toshikeikaku-info.jp/" target="_blank" rel="noopener" class="tab-btn">都市計画 ↗</a>
+  </div>
+</header>
+
+<!-- MAIN LAYOUT -->
+<div id="main-layout">
+
+  <!-- LEFT SIDEBAR -->
+  <aside id="left-sidebar">
+    <!-- エリア検索 -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">エリア検索</div>
+      <div id="search-wrapper">
+        <input type="text" id="search-input" placeholder="市区町村名を入力してください" autocomplete="off">
+        <div id="search-suggestions"></div>
+      </div>
+    </div>
+
+
+    <!-- 地図操作 -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">🗺 地図操作</div>
+      <button class="ctrl-btn" id="reset-btn" style="width:100%;margin-bottom:6px">🔄 全国表示</button>
+      <div class="map-ctrl-row">
+        <button class="ctrl-btn" id="zoom-in-btn">＋</button>
+        <button class="ctrl-btn" id="zoom-out-btn">−</button>
+        <div id="zoom-ratio-display"><span id="zoom-ratio-text">100%</span></div>
+      </div>
+      <div id="zoom-info" id="zi-hint-text">2.5倍以上に拡大すると市区町村が表示されます</div>
+    </div>
+  </aside>
+
+  <!-- MAP AREA -->
+  <div id="map-wrap">
+    <svg id="map"></svg>
+
+    <!-- 右下フローティング凡例 -->
+    <div id="legend-panel">
+      <div id="legend-title">📊 投資適合度</div>
+      <div class="leg-item" data-filter="5">
+        <div class="leg-dot" style="background:#b3d9f7"></div>
+        <span class="leg-label">★★★★★ S 最優良</span>
+      </div>
+      <div class="leg-item" data-filter="4">
+        <div class="leg-dot" style="background:#b3f0b3"></div>
+        <span class="leg-label">★★★★☆ A 優良</span>
+      </div>
+      <div class="leg-item" data-filter="3">
+        <div class="leg-dot" style="background:#fff4b0"></div>
+        <span class="leg-label">★★★☆☆ B 条件付き適合</span>
+      </div>
+      <div class="leg-item" data-filter="2">
+        <div class="leg-dot" style="background:#ffd9a8"></div>
+        <span class="leg-label">★★☆☆☆ C 要選別</span>
+      </div>
+      <div class="leg-item" data-filter="1">
+        <div class="leg-dot" style="background:#ffb3b3"></div>
+        <span class="leg-label">★☆☆☆☆ D 不適合</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT SIDEBAR -->
+  <aside id="right-sidebar">
+    <div id="panel-placeholder">
+      <div class="ph-icon">🗾</div>
+      <div class="ph-text">地図上の市区町村をクリックするか<br>左のエリア検索を使用してください</div>
+    </div>
+    <div id="panel-content">
+      <div id="panel-header">
+        <div id="panel-pref-name"></div>
+        <div id="panel-city-name"></div>
+        <button id="panel-close-btn" onclick="closeCityPanel()">✕</button>
+      </div>
+      <div id="panel-body"></div>
+    </div>
+  </aside>
+
+</div>
+
+<!-- スマホ用ボトムナビゲーション -->
+<nav id="bottom-nav" aria-label="メインナビゲーション">
+  <div class="mode-toggle">
+    <a href="index.html" class="mode-btn active">エリア特性</a>
+    <a href="https://disaportal.gsi.go.jp/hazardmap/maps/index.html" target="_blank" rel="noopener" class="mode-btn">ハザード</a>
+    <a href="https://www.chikamap.jp/chikamap/PrefecturesSelect?mid=325" target="_blank" rel="noopener" class="mode-btn">地価</a>
+    <a href="https://toshikeikaku-info.jp/" target="_blank" rel="noopener" class="mode-btn">都市計画</a>
+  </div>
+</nav>
+
+<!-- 互換性維持用 非表示要素 -->
+<div id="overlay" style="display:none;"></div>
+<div id="popup" style="display:none;">
+  <button id="pp-close" style="display:none;"></button>
+  <div id="pp-title" style="display:none;"></div>
+  <div id="pp-body" style="display:none;"></div>
+  <span id="pp-maxbadge" style="display:none;"></span>
+  <span id="pp-maxlabel" style="display:none;"></span>
+</div>
+<div id="tip"></div>
+<div id="loading-badge">⏳ データ読込中...</div>
+<div id="offline-error-console"></div>
+
+<script>
+// Error handling
+window.addEventListener('error', function(e) {
+  const c = document.getElementById('offline-error-console');
+  if (c) { c.style.display = 'block'; c.textContent = '⚠️ ' + e.message; }
+});
+
+const EN_TO_JA = {};
+let AREA_DATA = {};
+
+function _loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('スクリプト読み込み失敗: ' + src));
+    document.head.appendChild(s);
+  });
+}
+
+function makeProjection(w, h){
+  const isMobile = w < 600;
+  
+  // iPad / タブレットサイズ（タッチ対応デバイス、または画面幅から判定）
+  const isiPad = w >= 600 && w <= 1180 && (navigator.maxTouchPoints > 0 || /iPad|Macintosh/.test(navigator.userAgent));
+  
+  let scaleFactor = isMobile ? 3.0 : 1.28;
+  let tx = w * (isMobile ? 0.46 : 0.42);
+  let ty = h * (isMobile ? 0.46 : 0.52);
+
+  if (isiPad) {
+    const isPortrait = h > w;
+    // iPad縦画面（Portrait）と横画面（Landscape）でスケールと中心位置を微調整
+    scaleFactor = isPortrait ? 2.4 : 1.7;
+    tx = w * (isPortrait ? 0.47 : 0.44);
+    ty = h * (isPortrait ? 0.48 : 0.50);
+  }
+
+  return d3.geoMercator()
+    .center([137, 37])
+    .scale(w * scaleFactor)
+    .translate([tx, ty]);
+}
+
+let projFn, pathFn;
+let mapGroup, prefGroup, muniGroup, labelGroup;
+
+const STARS = r => '★'.repeat(r) + '☆'.repeat(5 - r);
+
+// 評価別の星カラー（マップの塗り色と統一）
+const STAR_COLORS = { 5:'#b3d9f7', 4:'#b3f0b3', 3:'#fff4b0', 2:'#ffd9a8', 1:'#ffb3b3', 0:'#64748b' };
+const STARS_HTML = (r) => {
+  const c = STAR_COLORS[r] || '#64748b';
+  const dim = 'rgba(255,255,255,0.18)';
+  return `<span style="color:${c}">${'★'.repeat(r)}</span><span style="color:${dim}">${'☆'.repeat(5-r)}</span>`;
+};
+
+const RATING_LABELS = {
+  5: '⭐⭐⭐⭐⭐ 最優良 (SS・S)',
+  4: '⭐⭐⭐⭐ 優良 (A・B)',
+  3: '⭐⭐⭐ 条件付き適合 (B・C)',
+  2: '⭐⭐ 要選別 (C〜D)',
+  1: '⭐ 不適合 (D)',
+  0: 'データなし'
+};
+
+const PREF_SHORT = {
+  "北海道":"北海道","青森県":"青森","岩手県":"岩手","宮城県":"宮城","秋田県":"秋田","山形県":"山形","福島県":"福島",
+  "茨城県":"茨城","栃木県":"栃木","群馬県":"群馬","埼玉県":"埼玉","千葉県":"千葉","東京都":"東京","神奈川県":"神奈川",
+  "新潟県":"新潟","富山県":"富山","石川県":"石川","福井県":"福井","山梨県":"山梨","長野県":"長野","岐阜県":"岐阜",
+  "静岡県":"静岡","愛知県":"愛知","三重県":"三重","滋賀県":"滋賀","京都府":"京都","大阪府":"大阪","兵庫県":"兵庫",
+  "奈良県":"奈良","和歌山県":"和歌山","鳥取県":"鳥取","島根県":"島根","岡山県":"岡山","広島県":"広島","山口県":"山口",
+  "徳島県":"徳島","香川県":"香川","愛媛県":"愛媛","高知県":"高知","福岡県":"福岡","佐賀県":"佐賀","長崎県":"長崎",
+  "熊本県":"熊本","大分県":"大分","宮崎県":"宮崎","鹿児島県":"鹿児島","沖縄県":"沖縄"
+};
+
+const PREF_FULL = {};
+for(const [k,v] of Object.entries(PREF_SHORT)) { PREF_FULL[v] = k; }
+
+// 動的に生成・管理される辞書オブジェクト
+const MAX_RATINGS = {};
+const MUNI_RATING_DICT = {};
+const DUPLICATE_MUNI_REPORT = [];
+const UNMATCHED_MUNI_REPORT = [];
+const JOIN_LOGS = [];
+
+/* --- 市区町村名の正規化関数 (超強化版) --- */
+/* --- 市区町村名の正規化関数 (超強化版) --- */
+function normalizeMunicipalityName(name) {
+  if (!name) return "";
+  let s = String(name);
+  
+  // カッコとその中身を除去 (例: "浜松市（中央区" -> "浜松市")
+  s = s.replace(/[\(（].*?[\)）]/g, "");
+  s = s.replace(/[（）()]/g, "");
+  
+  // 全角英数字・記号・スペースを半角に
+  s = s.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(m) {
+    return String.fromCharCode(m.charCodeAt(0) - 0xFEE0);
+  });
+  s = s.replace(/　/g, " ");
+  // 空白や改行を除去
+  s = s.replace(/[\s\r\n\t]/g, "");
+  
+  // 表記揺れの統一
+  s = s.replace(/[ヶケが]/g, "ヶ");
+  s = s.replace(/之/g, "の");
+  s = s.replace(/[-－‐—ー]/g, "-");
+  
+  // 郡名（例：紫波郡、大泉町など）の除去
+  s = s.replace(/^.*郡/, "");
+  
+  // 末尾の「市」「区」「町」「村」をカット
+  // 1文字の市区町村名（津市、堺市、北区など）が消えてしまうのを防ぐため、2文字以上の場合のみカット
+  if (s.length >= 2) {
+    s = s.replace(/[市区町村]$/, "");
+  }
+  
+  return s;
+}
+
+/* --- 動的初期化処理 (AREA_DATAより辞書と最大評価を動的生成) --- */
+const AVG_RATINGS = {};
+
+function initializeData() {
+  console.log("[init] Initializing dynamic rating dictionaries...");
+
+  for (const [pref, areas] of Object.entries(AREA_DATA)) {
+    let maxR = 0;
+    let sum = 0, count = 0;
+    areas.forEach(a => {
+      if (a.rating) {
+        if (a.rating > maxR) maxR = a.rating;
+        sum += a.rating;
+        count++;
+      }
+    });
+    const avgR = count > 0 ? Math.round(sum / count) : 0;
+    // 短縮名（PREF_SHORTのキーは都道府県フルネーム）でも格納してrenderMapのlookupに対応
+    const shortPref = PREF_SHORT[pref] || pref;
+    MAX_RATINGS[pref]  = maxR;  MAX_RATINGS[shortPref]  = maxR;
+    AVG_RATINGS[pref]  = avgR;  AVG_RATINGS[shortPref]  = avgR;
+  }
+  
+  for (const [pref, areas] of Object.entries(AREA_DATA)) {
+    const shortPref = pref.endsWith("県") || pref.endsWith("都") || pref.endsWith("府") ? pref.slice(0, -1) : pref;
+    
+    areas.forEach(area => {
+      const rating = area.rating;
+      const cities = area.cities || [];
+      
+      cities.forEach(city => {
+        const normCity = normalizeMunicipalityName(city);
+        if (!normCity) return;
+        
+        const compositeKey = `${shortPref}_${normCity}`;
+        
+        if (MUNI_RATING_DICT[compositeKey]) {
+          const prev = MUNI_RATING_DICT[compositeKey];
+          DUPLICATE_MUNI_REPORT.push({
+            "municipality名": city,
+            "prefecture": pref,
+            "出現回数": 2,
+            "rating一覧": `${prev.rating} (行:${prev.excelRow}), ${rating} (行:${area.excelRow})`,
+            "最終採用値": Math.max(prev.rating || 0, rating || 0)
+          });
+          
+          if ((rating || 0) > (prev.rating || 0)) {
+            MUNI_RATING_DICT[compositeKey] = {
+              rating: rating,
+              areaType: area.name,
+              excelRow: area.excelRow,
+              originalName: city,
+              population: area.population,
+              vacancy: area.vacancy,
+              landRisk: area.landRisk,
+              recommendation: area.recommendation
+            };
+          }
+        } else {
+          MUNI_RATING_DICT[compositeKey] = {
+            rating: rating,
+            areaType: area.name,
+            excelRow: area.excelRow,
+            originalName: city,
+            population: area.population,
+            vacancy: area.vacancy,
+            landRisk: area.landRisk,
+            recommendation: area.recommendation
+          };
+        }
+      });
+    });
+  }
+  
+  if (DUPLICATE_MUNI_REPORT.length > 0) {
+    console.log("=== 重複municipalityレポート ===");
+    console.table(DUPLICATE_MUNI_REPORT);
+  }
+}
+
+/* 市区町村データソース (geoBoundaries JPN ADM2 — 全1742市区町村 2.4MB) */
+const MUNI_TOPO_URL = 'https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09592ced973a3448cf66b6100b741b64c0d/releaseData/gbOpen/JPN/ADM2/geoBoundaries-JPN-ADM2.topojson';
+
+let activeFilter = null;
+let selected = null;
+let currentTransform = d3.zoomIdentity;
+const MUNI_THRESHOLD = 2.5; // ズーム倍率のしきい値
+let muniTopoData = null;     // ロード済み TopoJSON
+let muniFeatures = null;     // 処理済みフィーチャ配列（rating付き）
+let _cityLookup = {};        // 市区町村名 → フルエリアオブジェクト（グローバル）
+let muniLoading = false;
+let prefFeatures = [];       // 都道府県フィーチャ（空間判定用）
+
+const svg = d3.select('#map');
+const mapWrap = document.getElementById('map-wrap');
+const popup = document.getElementById('popup');
+const overlay = document.getElementById('overlay');
+const tip = document.getElementById('tip');
+
+function getW(){ return mapWrap.clientWidth; }
+function getH(){ return mapWrap.clientHeight; }
+
+/* --- フォールバック表示 --- */
+function showMapError(msg) {
+  const wrap = document.getElementById('map-wrap');
+  let errDiv = document.getElementById('map-error-overlay');
+  if (!errDiv) {
+    errDiv = document.createElement('div');
+    errDiv.id = 'map-error-overlay';
+    errDiv.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(15,23,42,0.92);color:#94a3b8;font-size:0.9rem;z-index:999;border-radius:inherit;pointer-events:auto';
+    wrap.style.position = 'relative';
+    wrap.appendChild(errDiv);
+  }
+  errDiv.innerHTML = `
+    <div style="font-size:2rem">⚠️</div>
+    <div style="color:#f1f5f9;font-size:1rem;font-weight:600">${msg}</div>
+    <div style="color:#64748b;font-size:0.78rem">再読み込みをお試しください</div>
+    <button onclick="location.reload()" style="margin-top:8px;padding:8px 20px;background:#3b82f6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.82rem">再読み込み</button>
+  `;
+  errDiv.style.display = 'flex';
+}
+function hideMapError() {
+  const errDiv = document.getElementById('map-error-overlay');
+  if (errDiv) errDiv.style.display = 'none';
+}
+
+/* --- デバッグユーティリティ (window.DEBUG = true で有効) --- */
+const _debug = {
+  startTime: null,
+  log(...args) { if (window.DEBUG) console.log('[DEBUG]', ...args); },
+  stats: {}
+};
+window._mapDebug = _debug;
+
+/* --- 市区町村の評価ランクを取得 (geoBoundaries用・空間検索 + 複合キー辞書による精密判定 + ローマ字自動解決 + 5段階優先補完) --- */
+function getMuniRatingGB(shapeName, lon, lat) {
+  let matchedPrefName = null;
+  for (const pref of prefFeatures) {
+    try {
+      if (d3.geoContains(pref, [lon, lat])) {
+        matchedPrefName = PREF_SHORT[pref.properties.nam_ja] || pref.properties.nam_ja;
+        if (matchedPrefName !== "京都" && matchedPrefName !== "東京都") {
+          matchedPrefName = matchedPrefName.endsWith("県") || matchedPrefName.endsWith("都") || matchedPrefName.endsWith("府") ? matchedPrefName.slice(0, -1) : matchedPrefName;
+        }
+        break;
+      }
+    } catch(e) {}
+  }
+  
+  if (!matchedPrefName) {
+    return { rating: null, pref: "不明", jaName: "不明", compositeKey: "不明", excelRow: null, status: "PREF_NOT_FOUND", confidence: "unmatched", reason: "都道府県判定失敗" };
+  }
+
+  // --- 空間近傍探索（フォールバック） ---
+  const fullPref = PREF_FULL[matchedPrefName] || matchedPrefName;
+  const areas = AREA_DATA[fullPref] || AREA_DATA[matchedPrefName] || [];
+  
+  let bestArea = null;
+  let bestCity = null;
+  let minD = Infinity;
+  
+  areas.forEach(area => {
+    if (area.lng && area.lat) {
+      const d = Math.pow(area.lng - lon, 2) + Math.pow(area.lat - lat, 2);
+      if (d < minD) {
+        minD = d;
+        bestArea = area;
+        bestCity = area.cities ? area.cities[0] : "";
+      }
+    }
+  });
+  
+  // 同一都道府県内で、距離が0.6度(約60km)以内の最も近い自治体へ自動マッピング
+  if (bestArea && minD < 0.6) {
+    const cleanJaName = bestCity;
+    const normCity = normalizeMunicipalityName(cleanJaName);
+    const compositeKey = `${matchedPrefName}_${normCity}`;
+    
+    return {
+      rating: bestArea.rating,
+      pref: matchedPrefName,
+      jaName: cleanJaName,
+      compositeKey: compositeKey,
+      excelRow: bestArea.excelRow,
+      status: "MATCHED",
+      confidence: "spatial",
+      reason: `空間近傍一致 (距離:${Math.sqrt(minD).toFixed(3)}度, 行:${bestArea.excelRow})`
+    };
+  }
+  
+  return {
+    rating: null,
+    pref: matchedPrefName,
+    jaName: shapeName,
+    compositeKey: "不明",
+    excelRow: null,
+    status: "UNMATCHED",
+    confidence: "unmatched",
+    reason: "近接に該当自治体なし (空間不一致)"
+  };
+}
+
+async function loadMunicipalities() {
+  if (muniFeatures) { renderAllMuni(); return; }
+  if (muniLoading) return;
+  muniLoading = true;
+
+  const badge = document.getElementById('loading-badge');
+  badge.textContent = '⏳ 市区町村データ展開中...';
+  badge.style.display = 'block';
+
+  try {
+    if (!prefFeatures || !prefFeatures.length) {
+      throw new Error('Prefecture features missing — renderMap() must complete first');
+    }
+
+    // 外部スクリプトから並列ロード（file://・GitHub Pages両対応）
+    await Promise.all([
+      _loadScript('muni_topo.js?v=20250601'),
+      _loadScript('centroid.js?v=20250601')
+    ]);
+    muniTopoData = window.JAPAN_MUNI_TOPOJSON;
+
+    // データ検証
+    const objKey = Object.keys(muniTopoData.objects || {})[0];
+    if (!objKey) throw new Error('Municipality TopoJSON: objects が空です');
+    const rawCheck = topojson.feature(muniTopoData, muniTopoData.objects[objKey]).features;
+    if (!rawCheck || !rawCheck.length) throw new Error('Municipality features missing');
+    _debug.log(`TopoJSON検証OK: ${rawCheck.length}件のFeature`);
+    let geomMissing = 0, codeMissing = 0;
+    rawCheck.forEach(f => {
+      if (!f.geometry) geomMissing++;
+      if (!f.properties || !f.properties.shapeName) codeMissing++;
+    });
+    if (geomMissing) _debug.log(`geometry欠損: ${geomMissing}件`);
+    if (codeMissing) _debug.log(`shapeName欠損: ${codeMissing}件`);
+
+    // objKey / raw は上の検証ブロックで取得済み
+    const raw = rawCheck;
+
+    JOIN_LOGS.length = 0;
+    UNMATCHED_MUNI_REPORT.length = 0;
+
+    // 頂点座標の算術平均で重心を計算（PythonとJSで一致）
+    function _simpleCentroid(geom) {
+      if (!geom) return [0, 0];
+      const lons = [], lats = [];
+      function collect(c) {
+        if (typeof c[0] === 'number') { lons.push(c[0]); lats.push(c[1]); }
+        else c.forEach(collect);
+      }
+      collect(geom.coordinates);
+      if (!lons.length) return [0, 0];
+      return [lons.reduce((a,b)=>a+b)/lons.length, lats.reduce((a,b)=>a+b)/lats.length];
+    }
+
+    // 都市名 → フルエリアオブジェクト（population_num等含む）グローバルに格納
+    _cityLookup = {};
+    for (const [pd, areas] of Object.entries(AREA_DATA)) {
+      const shortPd = PREF_SHORT[pd] || pd.replace(/[県都府]$/, '');
+      for (const area of areas) {
+        for (const city of (area.cities || [])) {
+          _cityLookup[city] = Object.assign({}, area, { pref: shortPd, fullPref: pd });
+        }
+      }
+    }
+
+    muniFeatures = raw.map((f, featureIndex) => {
+      const name = f.properties.shapeName || '';
+      let rating = null;
+      let prefName = "不明";
+      let jaName = name;
+      let compositeKey = "不明";
+      let excelRow = null;
+      let matchStatus = "UNMATCHED";
+      let confidence = "unmatched";
+      let reason = "完全不一致";
+
+      try {
+        // 重心座標キーで CENTROID_TO_CITY を参照
+        const [lon, lat] = _simpleCentroid(f.geometry);
+
+        // 英語shapeName → 日本語名の特例マッピング（重心ずれが生じるケース）
+        const SHAPENAME_OVERRIDE = { 'Matsumae': '松前町_北海道' };
+        const overrideJaName = SHAPENAME_OVERRIDE[name];
+
+        const ckey = lon.toFixed(3) + '_' + lat.toFixed(3);
+        const dictJaName = overrideJaName || (window._CENTROID_TO_CITY && window._CENTROID_TO_CITY[ckey]);
+
+        if (dictJaName) {
+          // AREA_DATA 直接ルックアップ（エクセル評価を確実に反映）
+          const info = _cityLookup[dictJaName];
+          if (info) {
+            const normCity = normalizeMunicipalityName(dictJaName);
+            rating    = info.rating;
+            prefName  = info.pref;
+            jaName    = dictJaName.replace(/_[^_]+$/, '');
+            compositeKey = `${info.pref}_${normCity}`;
+            excelRow  = info.excelRow;
+            matchStatus = "MATCHED";
+            confidence  = "centroid_dict";
+            reason      = `重心辞書一致 ${ckey}→${dictJaName}`;
+          } else {
+            jaName = dictJaName;
+            confidence = "dict_name_only";
+            reason = `名前解決済みだがARÉA_DATA未登録 (${dictJaName})`;
+          }
+        } else {
+          // フォールバック: 空間近傍探索
+          const res = getMuniRatingGB(name, lon, lat);
+          rating = res.rating;
+          prefName = res.pref;
+          jaName = res.jaName;
+          compositeKey = res.compositeKey;
+          excelRow = res.excelRow;
+          matchStatus = res.status;
+          confidence = res.confidence;
+          reason = res.reason;
+        }
+      } catch(e) {
+        rating = null;
+      }
+      
+      const ratingClass = rating !== null ? `r${rating}` : 'r0';
+      const logEntry = {
+        "prefecture": prefName,
+        "municipality": jaName,
+        "正規化後キー": compositeKey,
+        "GeoJSON側キー": name,
+        "マッチ結果": matchStatus === "UNMATCHED" ? "失敗" : `成功 (${matchStatus})`,
+        "最終rating": rating !== null ? rating : "null",
+        "最終class名": ratingClass,
+        "元Excel行番号": excelRow !== null ? excelRow : "なし",
+        "confidence": confidence,
+        "reason": reason
+      };
+      
+      JOIN_LOGS.push(logEntry);
+      
+      if (matchStatus === "UNMATCHED") {
+        console.warn(`[未一致警告] pref: ${prefName}, muni: ${jaName}, key: ${compositeKey}, GeoJSON_key: ${name} -> r0 (グレー表示)`);
+        UNMATCHED_MUNI_REPORT.push(logEntry);
+      }
+      
+      // _cityLookup はフルオブジェクト（population_num等含む）を保持
+      let areaDetails = _cityLookup[jaName] || null;
+      if (!areaDetails && excelRow && MUNI_RATING_DICT[compositeKey]) {
+        areaDetails = MUNI_RATING_DICT[compositeKey];
+      }
+      return { 
+        ...f, 
+        _rating: rating !== null ? rating : 0, 
+        _name: name, 
+        _jaName: jaName,
+        _confidence: confidence,
+        _reason: reason,
+        _details: areaDetails
+      };
+    });
+
+    console.log(`[join] 総市区町村数: ${JOIN_LOGS.length}件 | マッチ成功: ${JOIN_LOGS.filter(l => !l.マッチ結果.includes("失敗")).length}件 | 未一致: ${UNMATCHED_MUNI_REPORT.length}件`);
+
+    // --- 未評価自治体サイドバーアコーディオンの動的生成 ---
+    const unmappedContainer = document.getElementById('unmapped-container');
+    const unmappedCountEl = document.getElementById('unmapped-count');
+    if (unmappedContainer) {
+      unmappedContainer.innerHTML = '';
+    
+    const unmappedList = JOIN_LOGS.filter(l => l.confidence === "unmatched");
+    unmappedCountEl.textContent = `${unmappedList.length}件`;
+    
+    const listWrapper = document.createElement('div');
+    listWrapper.id = 'unmapped-list-wrapper';
+    unmappedContainer.appendChild(listWrapper);
+    
+    function renderTabContent() {
+      listWrapper.innerHTML = '';
+      const prefGroups = {};
+      unmappedList.forEach(item => {
+        if (!prefGroups[item.prefecture]) prefGroups[item.prefecture] = [];
+        prefGroups[item.prefecture].push(item);
+      });
+      
+      const sortedPrefs = Object.keys(prefGroups).sort();
+      if (sortedPrefs.length === 0) {
+        listWrapper.innerHTML = `<div style="text-align:center;color:#64748b;font-size:0.68rem;padding:12px">未評価の市区町村はありません</div>`;
+        return;
+      }
+      
+      sortedPrefs.forEach(pref => {
+        const groupEl = document.createElement('div');
+        groupEl.className = 'unmapped-pref-group collapsed';
+        
+        const headerEl = document.createElement('div');
+        headerEl.className = 'unmapped-pref-header';
+        headerEl.textContent = `${pref} (${prefGroups[pref].length}件)`;
+        headerEl.onclick = () => {
+          groupEl.classList.toggle('collapsed');
+        };
+        
+        const listEl = document.createElement('div');
+        listEl.className = 'unmapped-city-list';
+        
+        prefGroups[pref].forEach(item => {
+          const itemEl = document.createElement('div');
+          itemEl.className = 'unmapped-city-item';
+          itemEl.innerHTML = `
+            <span>${item.municipality} <span style="font-size:0.55rem;color:#4b5563">(行:${item.元Excel行番号})</span></span>
+            <span class="unmapped-reason-badge" style="background:rgba(255,255,255,0.06);color:#6b7280" title="エクセルで評価が空欄です">未評価</span>
+          `;
+          
+          itemEl.onclick = (e) => {
+            e.stopPropagation();
+            openPopup(item.prefecture, item.prefecture + "（未評価リストより逆引き）");
+          };
+          listEl.appendChild(itemEl);
+        });
+        
+        groupEl.appendChild(headerEl);
+        groupEl.appendChild(listEl);
+        listWrapper.appendChild(groupEl);
+      });
+    }
+    
+    renderTabContent();
+    } // End of unmappedContainer check
+
+    badge.style.display = 'none';
+
+    // デバッグ統計
+    const matched = JOIN_LOGS.filter(l => !l.マッチ結果.includes('失敗')).length;
+    _debug.stats.muniCount = JOIN_LOGS.length;
+    _debug.stats.matchedCount = matched;
+    _debug.stats.unmatchedCount = UNMATCHED_MUNI_REPORT.length;
+    _debug.log(`市区町村数: ${JOIN_LOGS.length}, マッチ成功: ${matched}, 未一致: ${UNMATCHED_MUNI_REPORT.length}`);
+    if (window.DEBUG) {
+      console.table({
+        市区町村数: JOIN_LOGS.length,
+        マッピング成功: matched,
+        マッピング失敗: UNMATCHED_MUNI_REPORT.length,
+        描画自治体数: muniFeatures ? muniFeatures.length : 0
+      });
+    }
+
+    renderAllMuni();
+  } catch(e) {
+    console.error('[muni] 取得失敗:', e.message);
+    if (window.DEBUG) console.error('[DEBUG] エラー詳細:', e);
+    badge.textContent = '⚠️ 市区町村データ取得失敗 — 都道府県表示中';
+    badge.style.display = 'block';
+    setTimeout(() => { badge.style.display = 'none'; }, 5000);
+    prefGroup && prefGroup.style('opacity', 1);
+    muniLoading = false;
+  }
+}
+
+/* --- 市区町村レイヤを再描画 --- */
+function renderAllMuni() {
+  if (!muniGroup || !muniFeatures) return;
+  muniGroup.selectAll('path.muni').remove();
+
+  muniGroup.selectAll('path.muni')
+    .data(muniFeatures)
+    .enter()
+    .append('path')
+    .attr('class', d => `muni r${d._rating}`)
+    .attr('d', pathFn)
+    .on('mousemove', function(event, d) {
+      const jaName = d._jaName || EN_TO_JA[d._name] || d._name;
+      const r = d._rating;
+      const info = _cityLookup[jaName];
+
+      // 星色
+      const starColor = r === 5 ? '#b3d9f7'   // ★5 青
+                      : r === 4 ? '#b3f0b3'  // ★4 緑
+                      : r === 3 ? '#fff4b0'  // ★3 黄
+                      : r === 2 ? '#ffd9a8'  // ★2 橙
+                      : r === 1 ? '#ffb3b3'  // ★1 赤
+                      : '#64748b';           // 未評価
+
+      // 基本データ行（数値）
+      const rows = [];
+      if (info?.population_num != null) rows.push(['人口', info.population_num.toLocaleString() + ' 人']);
+      if (info?.households     != null) rows.push(['世帯数', info.households.toLocaleString() + ' 世帯']);
+      if (info?.population_density != null) rows.push(['人口密度', Math.round(info.population_density).toLocaleString() + ' 人/km²']);
+      if (info?.rental_housing_num != null) rows.push(['借家数', info.rental_housing_num.toLocaleString() + ' 戸']);
+      if (info?.vacant_housing_num != null && info.vacant_housing_num > 0) rows.push(['借家の空室数', info.vacant_housing_num.toLocaleString() + ' 戸']);
+      if (info?.vacant_rate != null && info.vacant_rate > 0) rows.push(['借家の空室率', (info.vacant_rate * 100).toFixed(2) + ' %']);
+
+      const rowsHtml = rows.map(([label, val]) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:0.72rem;">
+          <span style="color:#f1f5f9">${label}</span>
+          <span style="color:#f1f5f9;font-weight:600">${val}</span>
+        </div>`).join('');
+
+      tip.innerHTML = `
+        <div style="font-size:0.9rem;font-weight:700;color:#f1f5f9;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <span>${jaName}</span>
+          ${r > 0 ? `<span style="color:${starColor};font-size:0.78rem;letter-spacing:1px">${STARS(r)}</span>` : ''}
+        </div>
+        ${rows.length > 0 ? `<div style="margin-top:4px">${rowsHtml}</div>` : `<div style="color:#64748b;font-size:0.72rem">統計データなし</div>`}
+        <div style="margin-top:8px;font-size:0.65rem;color:#475569;text-align:right">クリックで詳細を表示</div>
+      `;
+      tip.style.display = 'block';
+
+      const tw = 220;
+      const th = tip.offsetHeight || 140;
+      let left = event.clientX + 14;
+      let top  = event.clientY - 12;
+      if (left + tw > window.innerWidth)  left = event.clientX - tw - 14;
+      if (top  + th > window.innerHeight) top  = window.innerHeight - th - 14;
+      if (top < 0) top = 14;
+      tip.style.left = left + 'px';
+      tip.style.top  = top  + 'px';
+    })
+    .on('mouseleave', () => { tip.style.display = 'none'; })
+    .on('click', function(event, d) {
+      event.stopPropagation();
+      tip.style.display = 'none';
+
+      const jaName = d._jaName || EN_TO_JA[d._name] || d._name;
+
+      // 選択ハイライト
+      muniGroup.selectAll('path.muni').classed('selected-muni', false);
+      d3.select(this).classed('selected-muni', true);
+
+      // 都道府県名を取得
+      let prefName = '';
+      try {
+        const [lon, lat] = d3.geoCentroid(d);
+        for (const pref of prefFeatures) {
+          if (d3.geoContains(pref, [lon, lat])) {
+            prefName = pref.properties.nam_ja || '';
+            break;
+          }
+        }
+      } catch(e) {}
+
+      // _cityLookup からフルオブジェクト（population_num等含む）を取得
+      const areaDetails = _cityLookup[jaName] || d._details || null;
+
+      openCityPanel(jaName, prefName, areaDetails);
+    });
+
+  applyFilter();
+}
+
+/* --- ズームUI更新 --- */
+function updateZoomUI(k) {
+  const levelEl = document.getElementById('zi-level-text');
+  const hintEl = document.getElementById('zi-hint-text');
+  if (!levelEl || !hintEl) return; // Safety Guard
+  const isMuni = k >= MUNI_THRESHOLD;
+  levelEl.textContent = isMuni
+    ? `🏙 市区町村表示 (×${k.toFixed(1)})`
+    : `🗾 都道府県表示 (×${k.toFixed(1)})`;
+  hintEl.textContent = isMuni
+    ? '市区町村ごとに投資適合度を色分け表示' 
+    : '2.5倍以上に拡大すると市区町村が表示されます';
+}
+
+/* --- メインマップ描画 --- */
+function renderMap(japan){
+  _debug.startTime = performance.now();
+  const w = getW(), h = getH();
+  projFn = makeProjection(w, h);
+  pathFn = d3.geoPath().projection(projFn);
+
+  svg.attr('viewBox', `0 0 ${w} ${h}`);
+  svg.selectAll('*').remove();
+
+  // ズームグループ
+  mapGroup = svg.append('g').attr('id', 'map-group');
+  prefGroup = mapGroup.append('g').attr('id', 'pref-group');
+  muniGroup = mapGroup.append('g').attr('id', 'muni-group');
+  labelGroup = mapGroup.append('g').attr('id', 'label-group');
+
+  const features = topojson.feature(japan, japan.objects.japan).features;
+  prefFeatures = features;
+
+  // 都道府県パス
+  prefGroup.selectAll('path.pref')
+    .data(features)
+    .enter()
+    .append('path')
+    .attr('class', d => {
+      const shortName = PREF_SHORT[d.properties.nam_ja] || d.properties.nam_ja;
+      const r = AVG_RATINGS[shortName] || AVG_RATINGS[d.properties.nam_ja] || 0;
+      return `pref r${r}`;
+    })
+    .attr('d', pathFn)
+    .attr('data-pref', d => PREF_SHORT[d.properties.nam_ja] || d.properties.nam_ja)
+    .on('mousemove', function(event, d){
+      const shortName = PREF_SHORT[d.properties.nam_ja] || d.properties.nam_ja;
+      const fullName  = d.properties.nam_ja;
+      const maxR = MAX_RATINGS[shortName] || MAX_RATINGS[fullName] || 0;
+      const avgR = AVG_RATINGS[shortName] || AVG_RATINGS[fullName] || 0;
+      const areas = AREA_DATA[fullName] || AREA_DATA[shortName] || [];
+
+      let html = `<div id="tip-name"><span>${fullName}</span>`;
+      if (avgR > 0) {
+        html += `<span class="tip-rating-badge" style="color: #fff4b0;">平均: ${STARS(avgR)}</span>`;
+      }
+      html += `</div>`;
+
+      if (avgR > 0) {
+        html += `
+          <div id="tip-info" style="margin-bottom: 0; color: #cbd5e1; font-size: 0.72rem;">
+            収録市区町村数: <strong style="color: #93c5fd; font-size: 0.85rem;">${areas.length}</strong> 件
+            &nbsp;｜&nbsp; 最高評価: <strong style="color: #fbbf24;">${STARS(maxR)}</strong>
+          </div>
+          <div style="font-size: 0.65rem; color: #64748b; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 6px; line-height: 1.4;">
+            🔍 ズームイン（2.5倍以上）で市区町村ごとの詳細評価が表示されます。
+          </div>
+        `;
+      } else {
+        html += `<div id="tip-info" style="color: #64748b;">データなし</div>`;
+      }
+      
+      tip.innerHTML = html;
+      tip.style.display = 'block';
+      
+      let left = event.clientX + 14;
+      let top = event.clientY - 12;
+      if (left + 280 > window.innerWidth) {
+        left = event.clientX - 280 - 14;
+      }
+      tip.style.left = left + 'px';
+      tip.style.top = top + 'px';
+    })
+    .on('mouseleave', () => { tip.style.display = 'none'; })
+    .on('click', function(event, d){
+      event.stopPropagation();
+      const shortName = PREF_SHORT[d.properties.nam_ja] || d.properties.nam_ja;
+      if(AREA_DATA[shortName]){
+        openPopup(shortName, d.properties.nam_ja);
+        prefGroup.selectAll('path.pref').classed('active', false);
+        d3.select(this).classed('active', true);
+        selected = shortName;
+      }
+    });
+
+  // 都道府県ラベル
+  // MultiPolygon（東京・鹿児島・沖縄等）は最大ポリゴンの重心を使用
+  function getLabelCentroid(d) {
+    const geom = d.geometry;
+    if (geom && geom.type === 'MultiPolygon') {
+      let bestPoly = null, bestArea = -1;
+      geom.coordinates.forEach(polyCoords => {
+        const f = { type: 'Feature', geometry: { type: 'Polygon', coordinates: polyCoords } };
+        const b = pathFn.bounds(f);
+        if (b[0][0] !== Infinity) {
+          const a = (b[1][0] - b[0][0]) * (b[1][1] - b[0][1]);
+          if (a > bestArea) { bestArea = a; bestPoly = f; }
+        }
+      });
+      if (bestPoly) return pathFn.centroid(bestPoly);
+    }
+    return pathFn.centroid(d);
+  }
+
+  labelGroup.selectAll('text.pref-label')
+    .data(features)
+    .enter()
+    .append('text')
+    .attr('class', 'pref-label')
+    .attr('transform', d => {
+      const c = getLabelCentroid(d);
+      return `translate(${c[0]},${c[1]})`;
+    })
+    .attr('text-anchor', 'middle')
+    .attr('dominant-baseline', 'middle')
+    .style('font-size', w < 700 ? '5px' : '7px')
+    .style('fill', '#1f2937')
+    .style('font-weight', '600')
+    .style('pointer-events', 'none')
+    .style('font-family', "'Hiragino Kaku Gothic Pro','Yu Gothic',Meiryo,sans-serif")
+    .text(d => {
+      const n = d.properties.nam_ja;
+      return n.replace('県','').replace('都','').replace('府','').substring(0,3);
+    });
+
+  // D3 ズーム設定
+  let _lastZoomK = null;
+  let _zoomRafId = null;
+  const _labelBaseSize = w < 700 ? 5 : 7;
+
+  // mapGroupをGPUレイヤに昇格
+  mapGroup.style('will-change', 'transform');
+
+  const zoomBehavior = d3.zoom()
+    .scaleExtent([1, 80])
+    .translateExtent([[-w * 0.3, -h * 0.3], [w * 1.3, h * 1.3]])
+    .on('zoom', function(event) {
+      // ① transformの適用だけは即時（パン・ピンチをなめらかに）
+      currentTransform = event.transform;
+      mapGroup.attr('transform', event.transform);
+
+      // ② それ以外は次のフレームに1回だけ実行
+      if (_zoomRafId) return;
+      _zoomRafId = requestAnimationFrame(() => {
+        _zoomRafId = null;
+        const k = currentTransform.k;
+        if (k !== _lastZoomK) {
+          _lastZoomK = k;
+          labelGroup.selectAll('text.pref-label')
+            .style('font-size', (_labelBaseSize / k) + 'px');
+          labelGroup.style('display', k >= 2.5 ? 'block' : 'none');
+          updateZoomUI(k);
+        }
+      });
+    });
+
+  svg.call(zoomBehavior);
+
+  // リセットボタン
+  document.getElementById('reset-btn').onclick = () => {
+    svg.transition().duration(500).call(zoomBehavior.transform, d3.zoomIdentity);
+  };
+
+  applyFilter();
+  updatePrefList();
+
+  // 初期ロード時に市区町村を1回だけロード
+  prefGroup.style('opacity', 0.08);
+  muniGroup.style('display', 'block');
+  loadMunicipalities();
+
+  updateZoomUI(1);
+
+  // resizeの際にzoomBehaviorを保持
+  svg.__zoom_behavior = zoomBehavior;
+
+  const elapsed = performance.now() - (_debug.startTime || 0);
+  _debug.stats.prefCount = features.length;
+  _debug.stats.renderTimeMs = elapsed.toFixed(1);
+  _debug.log(`都道府県数: ${features.length}, 描画時間: ${elapsed.toFixed(1)}ms`);
+  if (window.DEBUG) {
+    console.table({
+      都道府県数: features.length,
+      描画時間ms: elapsed.toFixed(1),
+      エラー: 'なし'
+    });
+  }
+}
+
+function openPopup(shortName, fullName){
+  const areas = AREA_DATA[shortName] || [];
+  const maxR = MAX_RATINGS[shortName] || 0;
+
+  document.getElementById('pp-title').textContent = fullName + '　投資エリア分析';
+  const badge = document.getElementById('pp-maxbadge');
+  badge.textContent = STARS(maxR) + (RATING_LABELS[maxR] ? ' ' + RATING_LABELS[maxR].replace(/⭐+\s*/,'') : '');
+  badge.className = 'max-badge mb' + maxR;
+  document.getElementById('pp-maxlabel').textContent = `${areas.length}エリア収録`;
+
+  const body = document.getElementById('pp-body');
+  body.innerHTML = '';
+
+  areas.forEach(a => {
+    const r = a.rating;
+    const card = document.createElement('div');
+    card.className = `ac ar${r}`;
+    const citiesDisp = (a.cities && a.cities.length) ? a.cities.join('、') : '';
+    card.innerHTML = `
+      <div class="an">
+        <span>${a.name}</span>
+        <span class="sb sb${r}">${STARS(r)}</span>
+      </div>
+      ${citiesDisp ? `<div class="dr"><span class="dl">🏙️ 対象市区町村</span><span class="dv" style="font-size:0.78rem;line-height:1.6">${citiesDisp}</span></div>` : ''}
+      <div class="dr"><span class="dl">📊 人口動態</span><span class="dv">${a.population}</span></div>
+      <div class="dr"><span class="dl">🏠 需給状況</span><span class="dv">${a.vacancy}</span></div>
+      <div class="dr"><span class="dl">⚠️ 地盤・災害</span><span class="dv">${a.landRisk}</span></div>
+      <div class="rec">💡 ${a.recommendation}</div>
+    `;
+    body.appendChild(card);
+  });
+
+  overlay.style.display = 'block';
+  popup.style.display = 'flex';
+  popup.querySelector('.pb').scrollTop = 0;
+}
+
+function closePopup(){
+  overlay.style.display = 'none';
+  popup.style.display = 'none';
+  svg.selectAll('path.pref').classed('active', false);
+  selected = null;
+}
+
+document.getElementById('pp-close').addEventListener('click', closePopup);
+overlay.addEventListener('click', closePopup);
+
+// Legend filter
+document.querySelectorAll('.leg-item[data-filter]').forEach(el => {
+  el.addEventListener('click', () => {
+    const f = parseInt(el.getAttribute('data-filter'));
+    if(activeFilter === f){ activeFilter = null; }
+    else { activeFilter = f; }
+    document.querySelectorAll('.leg-item[data-filter]').forEach(e => {
+      e.classList.toggle('dim', activeFilter !== null && parseInt(e.getAttribute('data-filter')) !== activeFilter);
+    });
+    applyFilter();
+  });
+});
+
+function applyFilter(){
+  svg.selectAll('path.pref').style('opacity', d => {
+    if(activeFilter === null) return 1;
+    const shortName = PREF_SHORT[d.properties.nam_ja] || d.properties.nam_ja;
+    return MAX_RATINGS[shortName] === activeFilter ? 1 : 0.18;
+  });
+}
+
+function updatePrefList(){
+  const el = document.getElementById('pref-list');
+  if (!el) return; // Safety Guard
+  const groups = {};
+  for(const [k,v] of Object.entries(MAX_RATINGS)){
+    if(!groups[v]) groups[v] = [];
+    groups[v].push(PREF_FULL[k] || k);
+  }
+  let html = '';
+  for(let r=5; r>=1; r--){
+    if(groups[r]){
+      html += `<div style="color:#4b5563;font-size:.65rem;margin-top:6px">${STARS(r)}</div>`;
+      html += `<div style="color:#6b7280">${groups[r].join('、')}</div>`;
+    }
+  }
+  if (el) el.innerHTML = html;
+}
+
+// Load map (fetch area_data.json + pref.topojson in parallel, then render)
+async function initMapOffline() {
+  try {
+    if (!mapWrap || mapWrap.clientWidth === 0 || mapWrap.clientHeight === 0) {
+      setTimeout(initMapOffline, 50);
+      return;
+    }
+
+    const badge = document.getElementById('loading-badge');
+    if (badge) { badge.textContent = '⏳ データ読み込み中...'; badge.style.display = 'block'; }
+
+    await Promise.all([
+      _loadScript('area_data.js?v=20250603'),
+      _loadScript('pref_topo.js?v=20250601')
+    ]);
+
+    AREA_DATA = window.AREA_DATA;
+    initializeData();
+
+    if (badge) badge.style.display = 'none';
+
+    const japan = window.JAPAN_PREF_TOPOJSON;
+    if (!japan || !japan.objects || !japan.objects.japan) {
+      throw new Error('Prefecture TopoJSON: objects.japan が存在しません');
+    }
+    _debug.log('初期化開始');
+
+    renderMap(japan);
+    hideMapError(); // 以前のエラー表示があれば消す
+
+    window.addEventListener('resize', () => {
+      const oldTransform = currentTransform;
+      try {
+        renderMap(japan);
+        if (oldTransform !== d3.zoomIdentity) {
+          const zb = svg.node().__zoom_behavior;
+          if (zb) svg.call(zb.transform, oldTransform);
+        }
+      } catch(resizeErr) {
+        console.error('[resize] renderMap失敗:', resizeErr.message);
+        if (window.DEBUG) console.error('[DEBUG]', resizeErr);
+        showMapError('地図の再描画に失敗しました');
+      }
+    });
+
+    _debug.log('初期化完了');
+  } catch(err) {
+    console.error('[init] 初期化失敗:', err.message);
+    if (window.DEBUG) console.error('[DEBUG] エラー詳細:', err);
+    showMapError('地図データの読み込みに失敗しました');
+  }
+}
+
+if (document.readyState === 'complete') {
+  setTimeout(initMapOffline, 50);
+} else {
+  window.addEventListener('load', () => setTimeout(initMapOffline, 50));
+}
+
+
+// ==========================================
+// New UI Functions
+// ==========================================
+
+function calcScore(rating) {
+  // 新閾値（80/60/40/28）の各レンジ中央値
+  const mid = {5: 90, 4: 70, 3: 50, 2: 34, 1: 18};
+  return mid[rating] || 0;
+}
+
+function getRankInfo(rating) {
+  const map = {
+    5: { label: '最優良(S)', cls: 'rank-ss' },
+    4: { label: '優良(A)', cls: 'rank-a' },
+    3: { label: '条件付き適合(B)', cls: 'rank-b' },
+    2: { label: '要選別(C)', cls: 'rank-c' },
+    1: { label: '不適合(D)', cls: 'rank-d' }
+  };
+  return map[rating] || { label: 'データなし', cls: 'rank-d' };
+}
+
+function generateStrengths(area) {
+  const items = [];
+  const rec = (area.recommendation || '') + ' ' + (area.vacancy || '');
+  if (rec.includes('安定')) items.push('安定した賃貸需要');
+  if (rec.includes('実需')) items.push('実需に支えられた市場');
+  if (rec.includes('利回り')) items.push('高利回り期待');
+  if (rec.includes('転勤')) items.push('転勤・法人需要');
+  if (rec.includes('学生') || rec.includes('大学')) items.push('学生・若者需要');
+  if (items.length === 0 && area.rating >= 4) items.push('投資適合エリアとして評価済み');
+  return items;
+}
+
+function generateRisks(area) {
+  const items = [];
+  const risk = area.landRisk || '';
+  const vac = area.vacancy || '';
+  if (risk.includes('積雪')) items.push('豪雪ハザード要確認');
+  if (risk.includes('浸水') || risk.includes('氾濫')) items.push('水害リスク要確認');
+  if (risk.includes('土砂')) items.push('土砂災害リスク');
+  if (risk.includes('液状化')) items.push('液状化リスク');
+  if (vac.includes('空室') || vac.includes('供給過多')) items.push('供給過多・空室リスク');
+  return items;
+}
+
+function formatFeatureText(text) {
+  if (!text) return '';
+  
+  // 「・人口動態：」「・賃貸需給：」「・地理リスク：」などの見出しを検出して、それぞれをブロックに分割する
+  const items = text.split(/(?=・[^：\n]+：)/);
+  
+  if (items.length <= 1) {
+    return `<div style="line-height:1.8">${text}</div>`;
+  }
+  
+  return items.map(item => {
+    item = item.trim();
+    if (!item) return '';
+    
+    const match = item.match(/^・([^：\n]+)：([\s\S]*)$/);
+    if (match) {
+      const title = match[1];
+      const body = match[2].trim();
+      return `
+        <div class="feature-section" style="margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+          <div class="feature-title" style="font-weight: 700; color: #f1f5f9; font-size: 0.78rem; margin-bottom: 5px; display: flex; align-items: center;">
+            <span style="display: inline-block; width: 4px; height: 12px; background: #6366f1; margin-right: 6px; border-radius: 2px;"></span>
+            ${title}
+          </div>
+          <div class="feature-body" style="font-size: 0.72rem; color: #cbd5e1; line-height: 1.6; padding-left: 10px;">
+            ${body}
+          </div>
+        </div>
+      `;
+    }
+    return `<div style="line-height:1.8">${item}</div>`;
+  }).join('').replace(/border-bottom: 1px solid rgba\(255,255,255,0.05\); padding-bottom: 10px;\s*$/, ''); // 最後の要素の下線は消去
+}
+
+function formatFeatureText(text) {
+  if (!text) return '';
+  
+  // 「・人口動態：」「・賃貸需給：」「・地理リスク：」などの見出しを検出して、それぞれをブロックに分割する
+  const items = text.split(/(?=・[^：\n]+：)/);
+  
+  if (items.length <= 1) {
+    return `<div style="line-height:1.8">${text}</div>`;
+  }
+  
+  return items.map(item => {
+    item = item.trim();
+    if (!item) return '';
+    
+    const match = item.match(/^・([^：\n]+)：([\s\S]*)$/);
+    if (match) {
+      const title = match[1];
+      const body = match[2].trim();
+      return `
+        <div class="feature-section" style="margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+          <div class="feature-title" style="font-weight: 700; color: #f1f5f9; font-size: 0.78rem; margin-bottom: 5px; display: flex; align-items: center;">
+            <span style="display: inline-block; width: 4px; height: 12px; background: #6366f1; margin-right: 6px; border-radius: 2px;"></span>
+            ${title}
+          </div>
+          <div class="feature-body" style="font-size: 0.72rem; color: #cbd5e1; line-height: 1.6; padding-left: 10px;">
+            ${body}
+          </div>
+        </div>
+      `;
+    }
+    return `<div style="line-height:1.8">${item}</div>`;
+  }).join('').replace(/border-bottom: 1px solid rgba\(255,255,255,0.05\); padding-bottom: 10px;\s*$/, ''); // 最後の要素の下線は消去
+}
+
+function openCityPanel(cityName, prefName, areaData) {
+  const sidebar = document.getElementById('right-sidebar');
+  const content = document.getElementById('panel-content');
+  if (!content || !sidebar) return;
+  sidebar.classList.remove('panel-open');
+  void sidebar.offsetWidth;
+  sidebar.classList.add('panel-open');
+  content.style.display = 'flex';
+
+  document.getElementById('panel-pref-name').textContent = prefName || '';
+  document.getElementById('panel-city-name').textContent = cityName || '';
+
+  const body = document.getElementById('panel-body');
+  if (!areaData) {
+    body.innerHTML = '<div style="color:#64748b;font-size:0.8rem;padding:16px">このエリアのデータはありません</div>';
+    return;
+  }
+
+  const rating = areaData.rating || 0;
+  const score = calcScore(rating);
+  const rank = getRankInfo(rating);
+  const stars = STARS_HTML(rating);
+  const strengths = generateStrengths(areaData);
+  const risks = generateRisks(areaData);
+
+  // エリア特徴（Excelの「エリア特徴」列）を優先。なければ旧テキストで代替
+  const featureText = areaData.feature || null;
+  const summary = ((areaData.population || '') + ' ' + (areaData.vacancy || '')).trim().substring(0, 120);
+
+  let strengthsHtml = strengths.length
+    ? strengths.map(s => `<li>${s}</li>`).join('')
+    : '<li style="color:#64748b">特記事項なし</li>';
+  let risksHtml = risks.length
+    ? risks.map(r => `<li>${r}</li>`).join('')
+    : '<li style="color:#64748b">特記リスクなし</li>';
+
+  const totalScore = areaData.score_total != null ? parseFloat(areaData.score_total).toFixed(1) : score;
+  const popScore = areaData.pop_score != null ? areaData.pop_score : 'データなし';
+  const demoScore = areaData.score_demographics != null ? areaData.score_demographics : 'データなし';
+  const demandScore = areaData.score_demand != null ? areaData.score_demand : 'データなし';
+  const riskScore = areaData.score_risk != null ? areaData.score_risk : 'データなし';
+
+  body.innerHTML = `
+    <!-- 投資適合度 -->
+    <div class="panel-card">
+      <div class="panel-card-title">📊 投資適合度</div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <div id="rating-stars" style="margin-bottom: 0;">${stars}</div>
+        <span class="rank-badge ${rank.cls}" style="position: static; margin: 0;">${rank.label}</span>
+      </div>
+      <div id="rating-score" style="margin-bottom: 12px; font-size: 0.82rem; border-bottom: 1px solid var(--border-sub); padding-bottom: 8px;">
+        総合スコア: <strong style="color:var(--accent-orange); font-size: 1.05rem;">${totalScore}</strong> <span style="font-size:0.65rem; color:var(--text-dim)">/ 100</span>
+        <div style="font-size: 0.58rem; color: var(--text-dim); margin-top: 3px; font-weight: normal;">※人口・人口動態の2軸均等平均で算出</div>
+      </div>
+      
+      <!-- スコア内訳 -->
+      <div class="score-details" style="font-size: 0.7rem; color: var(--text-secondary); background: var(--bg-glass); border-radius: 8px; padding: 10px; border: 1px solid var(--border-sub);">
+        <div style="font-weight: 700; color: var(--text-dim); margin-bottom: 6px; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center;">
+          <span>スコア内訳</span>
+          <span style="font-weight: 500; text-transform: none; font-size: 0.58rem; color: var(--text-dim);">(2軸均等平均)</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px; border-bottom: 1px solid var(--border-sub); padding-bottom: 4px;">
+          <span>👥 人口スコア:</span>
+          <strong style="color: var(--text-primary);">${typeof popScore === 'number' ? popScore.toFixed(1) : popScore}点</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px; border-bottom: 1px solid var(--border-sub); padding-bottom: 4px;">
+          <span>📈 将来人口スコア:</span>
+          <strong style="color: var(--text-primary);">${typeof demoScore === 'number' ? demoScore.toFixed(1) : demoScore}点</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- 基本データ（数値） -->
+    <div class="panel-card">
+      <div class="panel-card-title">📋 基本データ</div>
+      
+      <!-- 上部基本指標 -->
+      ${areaData.population_num != null ? `
+      <div class="data-row">
+        <span class="data-label">人口<span style="font-size:0.6rem;color:#64748b;margin-left:4px;">2025年</span></span>
+        <span class="data-val-num">${areaData.population_num.toLocaleString()}<span class="data-unit">人</span></span>
+      </div>` : ''}
+      ${areaData.households != null ? `
+      <div class="data-row">
+        <span class="data-label">世帯数<span style="font-size:0.6rem;color:#64748b;margin-left:4px;">2025年</span></span>
+        <span class="data-val-num">${areaData.households.toLocaleString()}<span class="data-unit">世帯</span></span>
+      </div>` : ''}
+      ${areaData.population_density != null ? `
+      <div class="data-row">
+        <span class="data-label">人口密度<span style="font-size:0.6rem;color:#64748b;margin-left:4px;">2025年</span></span>
+        <span class="data-val-num">${Math.round(areaData.population_density).toLocaleString()}<span class="data-unit">人/km²</span></span>
+      </div>` : ''}
+      ${areaData.rental_housing_num != null ? `
+      <div class="data-row">
+        <span class="data-label">借家数<span style="font-size:0.6rem;color:#64748b;margin-left:4px;">2023年</span></span>
+        <span class="data-val-num">${areaData.rental_housing_num.toLocaleString()}<span class="data-unit">戸</span></span>
+      </div>` : ''}
+      ${(areaData.vacant_housing_num != null && areaData.vacant_housing_num > 0) ? `
+      <div class="data-row">
+        <span class="data-label">借家の空室数<span style="font-size:0.6rem;color:#64748b;margin-left:4px;">2023年</span></span>
+        <span class="data-val-num">${areaData.vacant_housing_num.toLocaleString()}<span class="data-unit">戸</span></span>
+      </div>` : ''}
+      ${(areaData.vacant_rate != null && areaData.vacant_rate > 0) ? `
+      <div class="data-row">
+        <span class="data-label">借家の空室率<span style="font-size:0.6rem;color:#64748b;margin-left:4px;">2023年</span></span>
+        <span class="data-val-num">${(areaData.vacant_rate * 100).toFixed(2)}<span class="data-unit">%</span></span>
+      </div>` : ''}
+
+      <!-- 中部：将来人口推計 (社人研) ➔ 2040年削除・百人単位(人単位)・増減率内包 -->
+      ${areaData.pop_trend != null ? (() => {
+        const trend = areaData.pop_trend;
+        const pop2020 = trend["2020"];
+        
+        const getGrowthBadge = (yearPop) => {
+          if (!pop2020 || !yearPop) return '';
+          const rate = (yearPop / pop2020 - 1) * 100;
+          const color = rate > 0 ? '#10b981' : rate < 0 ? '#f87171' : '#94a3b8';
+          const arrow = rate > 0 ? '↑' : rate < 0 ? '↓' : '→';
+          const sign = rate > 0 ? '+' : '';
+          return `<div style="color:${color};font-size:0.55rem;margin-top:2px;font-weight:700;">${sign}${rate.toFixed(2)}% ${arrow}</div>`;
+        };
+        
+        return `<div class="data-row" style="flex-direction:column;align-items:stretch;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">
+          <div style="font-weight:700;font-size:0.68rem;color:#94a3b8;margin-bottom:6px;display:flex;align-items:center;gap:4px">
+            <span>📈 将来人口推計 (社人研)</span>
+          </div>
+          ${areaData.pop_trend_note ? `<div style="font-size:0.6rem;color:#f59e0b;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:4px;padding:4px 8px;margin-bottom:6px;">⚠️ ${areaData.pop_trend_note}</div>` : ''}
+          <div style="display:grid;grid-template-columns: repeat(4, 1fr);gap:4px;text-align:center;font-size:0.65rem;background:rgba(255,255,255,0.02);padding:8px;border-radius:6px;margin-bottom:8px;">
+            <div>
+              <div style="color:#64748b;font-weight:700">2020年</div>
+              <div style="color:#f1f5f9;font-weight:600;margin-top:2px;">${trend["2020"] != null ? trend["2020"].toLocaleString() + '人' : '-'}</div>
+              <div style="color:#94a3b8;font-size:0.55rem;margin-top:2px;">基準年</div>
+            </div>
+            <div>
+              <div style="color:#64748b;font-weight:700">2025年</div>
+              <div style="color:#f1f5f9;font-weight:600;margin-top:2px;">${trend["2025"] != null ? trend["2025"].toLocaleString() + '人' : '-'}</div>
+              ${getGrowthBadge(trend["2025"])}
+            </div>
+            <div>
+              <div style="color:#64748b;font-weight:700">2030年</div>
+              <div style="color:#f1f5f9;font-weight:600;margin-top:2px;">${trend["2030"] != null ? trend["2030"].toLocaleString() + '人' : '-'}</div>
+              ${getGrowthBadge(trend["2030"])}
+            </div>
+            <div>
+              <div style="color:#64748b;font-weight:700">2045年</div>
+              <div style="color:#f1f5f9;font-weight:600;margin-top:2px;">${trend["2045"] != null ? trend["2045"].toLocaleString() + '人' : '-'}</div>
+              ${getGrowthBadge(trend["2045"])}
+            </div>
+          </div>
+        </div>`;
+      })() : ''}
+
+      ${!areaData.population_num && !areaData.households ? `
+      <div style="color:#64748b;font-size:0.72rem">統計データなし</div>` : ''}
+    </div>
+
+    <!-- エリア概要 -->
+    ${(featureText || summary) ? `<div class="panel-card">
+      <div class="panel-card-title">📋 エリア特徴</div>
+      <div style="font-size:0.75rem;color:var(--text-secondary);line-height:1.8;">${formatFeatureText(featureText || summary)}</div>
+    </div>` : ''}
+  `;
+}
+
+function closeCityPanel() {
+  const sidebar = document.getElementById('right-sidebar');
+  const content = document.getElementById('panel-content');
+  if (sidebar) sidebar.classList.remove('panel-open');
+  if (content) content.style.display = 'none';
+  svg.selectAll('path.muni').classed('selected-muni', false);
+  svg.selectAll('path.pref').classed('active', false);
+  selected = null;
+
+  // 検索入力欄のテキストをクリア
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) searchInput.value = '';
+}
+
+function zoomToCity(lat, lng) {
+  if (!projFn || !svg.__zoom_behavior) return;
+  const [sx, sy] = projFn([lng, lat]);
+  const w = getW(), h = getH();
+  const scale = 10;
+  // モバイルは下パネル(48vh)が地図に重なるため、
+  // 検索エリア下端〜パネル上端の中央に市区町村を配置
+  // panel top ≈ h*0.47, center = h*0.47/2 ≈ h*0.24
+  const isMobile = w < 600;
+  const yCenter = isMobile ? h * 0.24 : h * 0.50;
+  const tx = w / 2 - scale * sx;
+  const ty = yCenter - scale * sy;
+  const transform = d3.zoomIdentity.translate(tx, ty).scale(scale);
+  svg.transition().duration(800).call(svg.__zoom_behavior.transform, transform);
+}
+
+// Override openPopup to use new right panel (for prefecture clicks)
+function openPopup(shortName, fullName) {
+  const areas = AREA_DATA[shortName] || AREA_DATA[fullName] || [];
+  if (areas.length === 0) return;
+  // Pick highest-rated area for display
+  const best = areas.reduce((a, b) => (b.rating || 0) > (a.rating || 0) ? b : a, areas[0]);
+  openCityPanel(fullName || shortName, fullName || shortName, best);
+}
+
+
+// Search functionality
+const searchInput = document.getElementById('search-input');
+const suggestionsContainer = document.getElementById('search-suggestions');
+
+// 市区町村名でパスを探してblueハイライトを適用（ズーム後にロードされるまでリトライ）
+function highlightMuniByName(cityName, retries = 12) {
+  // ズームアニメーション(800ms)完了を待ってから実行
+  setTimeout(function attempt() {
+    const paths = muniGroup ? muniGroup.selectAll('path.muni') : null;
+    if (!paths || paths.empty()) {
+      if (retries > 0) setTimeout(attempt, 200);
+      return;
+    }
+    const target = paths.filter(d => d._jaName === cityName);
+    if (!target.empty()) {
+      muniGroup.selectAll('path.muni').classed('selected-muni', false);
+      target.classed('selected-muni', true);
+    } else if (retries > 0) {
+      setTimeout(attempt, 200);
+    }
+  }, 900); // ズームアニメーション800ms + 余裕100ms
+}
+
+searchInput.addEventListener('input', () => {
+  const query = searchInput.value.trim().toLowerCase();
+  suggestionsContainer.innerHTML = '';
+  if (!query || query.length < 1) {
+    suggestionsContainer.style.display = 'none';
+    return;
+  }
+  const matches = [];
+  const seen = new Set();
+  for (const [pref, list] of Object.entries(AREA_DATA)) {
+    list.forEach(area => {
+      (area.cities || []).forEach(city => {
+        if (city.includes(query) || city.toLowerCase().includes(query)) {
+          const k = pref + '_' + city;
+          if (!seen.has(k)) {
+            seen.add(k);
+            matches.push({ pref, city, area });
+          }
+        }
+      });
+    });
+  }
+  const display = matches.slice(0, 6);
+  if (!display.length) { suggestionsContainer.style.display = 'none'; return; }
+  display.forEach(m => {
+    const item = document.createElement('div');
+    item.className = 'suggestion-item';
+    item.innerHTML = `<span class="sug-city">${m.city}</span><span class="sug-pref">${m.pref}</span><span class="sug-badge r${m.area.rating}">★${m.area.rating}</span>`;
+    item.addEventListener('click', () => {
+      searchInput.value = m.city;
+      suggestionsContainer.style.display = 'none';
+
+      // Zoom to city
+      if (m.area.lat && m.area.lng) {
+        zoomToCity(m.area.lat, m.area.lng);
+      } else {
+        const prefFeature = prefFeatures.find(f => {
+          const nm = f.properties.nam_ja || '';
+          return nm.includes(m.pref) || m.pref.includes(nm.replace(/[県都府]$/, ''));
+        });
+        if (prefFeature) {
+          const [cx, cy] = d3.geoCentroid(prefFeature);
+          zoomToCity(cy, cx);
+        }
+      }
+
+      // ズームアニメーション完了後にハイライト適用（リトライあり）
+      highlightMuniByName(m.city);
+
+      openCityPanel(m.city, m.pref, m.area);
+    });
+    suggestionsContainer.appendChild(item);
+  });
+  suggestionsContainer.style.display = 'block';
+});
+
+document.addEventListener('click', (e) => {
+  if (e.target !== searchInput) suggestionsContainer.style.display = 'none';
+});
+
+// Zoom in/out buttons
+document.getElementById('zoom-in-btn').addEventListener('click', () => {
+  if (svg.__zoom_behavior) svg.transition().duration(300).call(svg.__zoom_behavior.scaleBy, 1.5);
+});
+document.getElementById('zoom-out-btn').addEventListener('click', () => {
+  if (!svg.__zoom_behavior) return;
+  const k = currentTransform.k;
+  if (k <= 1) return; // 100%以下にはしない
+  svg.transition().duration(300).call(svg.__zoom_behavior.scaleBy, 0.67);
+});
+
+// Prefecture border toggle (Disabled as it is no longer needed with always-on municipality display)
+const prefToggle = document.getElementById('pref-border-toggle');
+let showPrefBorders = true;
+if (prefToggle) {
+  prefToggle.addEventListener('click', () => {
+    showPrefBorders = !showPrefBorders;
+    const prefGroupEl = document.getElementById('pref-group');
+    if (prefGroupEl) {
+      prefGroupEl.style.display = showPrefBorders ? '' : 'none';
+    }
+    prefToggle.classList.toggle('active', showPrefBorders);
+    prefToggle.textContent = showPrefBorders ? '都道府県境界を表示' : '都道府県境界を非表示';
+  });
+}
+
+// Override updateZoomUI to update new elements
+const _origUpdateZoomUI = updateZoomUI;
+updateZoomUI = function(k) {
+  const zoomText = document.getElementById('zoom-ratio-text');
+  if (zoomText) zoomText.textContent = Math.round(k * 100) + '%';
+  const zoomInfo = document.getElementById('zoom-info');
+  if (zoomInfo) {
+    zoomInfo.textContent = '全国の市区町村を常に色分け表示中';
+  }
+};
+
+// Legend filter
+document.querySelectorAll('.leg-item[data-filter]').forEach(el => {
+  el.addEventListener('click', () => {
+    const f = parseInt(el.getAttribute('data-filter'));
+    if (activeFilter === f) { activeFilter = null; }
+    else { activeFilter = f; }
+    document.querySelectorAll('.leg-item[data-filter]').forEach(e => {
+      e.classList.toggle('dim', activeFilter !== null && parseInt(e.getAttribute('data-filter')) !== activeFilter);
+    });
+    applyFilter();
+  });
+});
+
+// Compatibility stubs
+document.getElementById('pp-close').addEventListener('click', closeCityPanel);
+document.getElementById('overlay').addEventListener('click', closeCityPanel);
+
+// ─── ハンバーガードロワー ───────────────────────────────────────
+function toggleDrawer() {
+  const drawer = document.getElementById('drawer');
+  const overlay = document.getElementById('drawer-overlay');
+  const isOpen = drawer.classList.contains('open');
+  if (isOpen) {
+    closeDrawer();
+  } else {
+    drawer.classList.add('open');
+    overlay.classList.add('open');
+  }
+}
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-overlay').classList.remove('open');
+}
+// ESCキーで閉じる
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+// ──────────────────────────────────────────────────────────────────
+
+</script>
+</body>
+</html>
