@@ -924,7 +924,7 @@ text.pref-label {
 #drawer-overlay {
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,0.45);
-  backdrop-filter: blur(2px); z-index: 900;
+  backdrop-filter: blur(2px); z-index: 1100;
 }
 #drawer-overlay.open { display: block; }
 
@@ -934,7 +934,7 @@ text.pref-label {
   background: rgba(28,28,30,0.95);
   backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
   border-right: 1px solid var(--border);
-  z-index: 950;
+  z-index: 1200;
   transform: translateX(-100%);
   transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
   display: flex; flex-direction: column; overflow: hidden;
